@@ -1,0 +1,346 @@
+---
+import { getCollection } from 'astro:content';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import FormattedDate from '../../components/FormattedDate.astro';
+import Header from '../../components/Header.astro';
+import { siteConfig } from '../../config/site';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import { buildBreadcrumbJsonLd } from '../../utils/jsonLd';
+import { sortPosts, collectTags } from '../../utils/posts';
+import { toTitle } from '../../utils/tags';
+
+const posts = sortPosts(await getCollection('blog'));
+const tags = collectTags(posts);
+const jsonLd = buildBreadcrumbJsonLd([
+	{ name: 'Home', url: Astro.site?.toString() ?? siteConfig.site },
+	{ name: 'Blog', url: new URL('/blog/', Astro.site ?? siteConfig.site).toString() },
+]);
+
+const basePath = import.meta.env.BASE_URL;
+const withBase = (path: string) => {
+	const normalized = path.replace(/^\//, '');
+	return basePath.endsWith('/') ? `${basePath}${normalized}` : `${basePath}/${normalized}`;
+};
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title="Blog" description={SITE_DESCRIPTION} jsonLd={jsonLd} />
+		<style>
+			main {
+				width: 960px;
+				max-width: 100%;
+			}
+
+			/* Filter Bar */
+			.filter-container {
+				position: relative;
+				display: flex;
+				align-items: center;
+				margin-bottom: 3rem;
+				width: 100%;
+			}
+
+			.filter-bar {
+				display: flex;
+				flex-wrap: nowrap;
+				overflow-x: auto;
+				gap: 0.75rem;
+				padding: 0.5rem 0.25rem 1rem;
+				width: 100%;
+				-webkit-overflow-scrolling: touch;
+				scrollbar-width: none; /* Firefox */
+				-ms-overflow-style: none; /* IE 10+ */
+				mask-image: linear-gradient(to right, transparent, black 2%, black 98%, transparent);
+				-webkit-mask-image: linear-gradient(to right, transparent, black 2%, black 98%, transparent);
+			}
+
+			.scroll-btn {
+				position: absolute;
+				top: 40%;
+				transform: translateY(-50%);
+				z-index: 20;
+				background: rgba(5, 5, 5, 0.9);
+				border: 1px solid var(--border-subtle);
+				border-radius: 50%;
+				width: 32px;
+				height: 32px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				cursor: pointer;
+				color: var(--text-muted);
+				transition: all 0.2s;
+				opacity: 0;
+				pointer-events: none;
+			}
+
+			.scroll-btn.visible {
+				opacity: 1;
+				pointer-events: auto;
+			}
+
+			.scroll-btn:hover {
+				color: #fff;
+				border-color: var(--accent);
+				background: rgba(255, 255, 255, 0.05);
+			}
+
+			.scroll-btn.left { left: 0; }
+			.scroll-btn.right { right: 0; }
+
+			@media (pointer: coarse) {
+				.scroll-btn { display: none; }
+			}
+
+			.filter-bar::-webkit-scrollbar {
+				display: none; /* Chrome/Safari */
+			}
+
+			.filter-tag {
+				flex: 0 0 auto;
+				display: inline-block;
+				padding: 0.4rem 0.85rem;
+				font-size: 0.85rem;
+				color: var(--text-muted);
+				text-decoration: none;
+				transition: all 0.2s;
+				text-transform: uppercase;
+				letter-spacing: 0.05em;
+				font-weight: 500;
+				position: relative;
+				cursor: pointer;
+				background: rgba(255, 255, 255, 0.03);
+				border: 1px solid var(--border-subtle);
+				border-radius: 999px; /* Pill shape */
+			}
+
+			/* Remove underline animation, switching to pill style */
+			.filter-tag::after {
+				display: none;
+			}
+
+			.filter-tag:hover {
+				color: #fff;
+				background: rgba(255, 255, 255, 0.08);
+				border-color: var(--border-hover);
+			}
+
+			/* Active state */
+			.filter-tag.active {
+				background: rgba(249, 115, 22, 0.15);
+				color: var(--accent);
+				border-color: var(--accent);
+				box-shadow: 0 0 15px -5px rgba(249, 115, 22, 0.3);
+			}
+
+			/* Blog Grid */
+			ul {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+				gap: 2rem;
+				list-style-type: none;
+				margin: 0;
+				padding: 0;
+			}
+
+			li {
+				transition: all 0.3s ease;
+			}
+
+			/* Hidden state for filtering */
+			li.hidden {
+				display: none;
+			}
+
+			.post-link {
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				height: 100%;
+				min-height: 180px;
+				padding: 2rem;
+				border-radius: 8px; /* Tech radius */
+				background: rgba(10, 10, 10, 0.6);
+				border: 1px solid var(--border-subtle);
+				text-decoration: none;
+				position: relative;
+				overflow: hidden;
+				transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+			}
+
+			.post-link:hover {
+				background: rgba(15, 15, 15, 0.9);
+				border-color: var(--accent); /* Orange border on hover */
+				transform: translateY(-4px);
+				box-shadow: 0 10px 30px -10px rgba(249, 115, 22, 0.15); /* Orange glow */
+			}
+
+			.post-link:hover .title {
+				color: var(--accent);
+			}
+
+			.title {
+				margin: 0 0 0.75rem 0;
+				color: #fff;
+				font-size: 1.5rem;
+				line-height: 1.2;
+				font-weight: 700;
+				letter-spacing: -0.02em;
+				transition: color 0.2s;
+			}
+
+			.date {
+				margin: 0;
+				color: var(--text-muted);
+				font-size: 0.85rem;
+				font-family: var(--font-mono);
+				opacity: 0.7;
+			}
+
+			@media (max-width: 720px) {
+				ul {
+					grid-template-columns: 1fr;
+					gap: 1.5rem;
+				}
+				.title {
+					font-size: 1.25rem;
+				}
+			}
+
+			.card-tags {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.5rem;
+				margin-top: 1rem;
+			}
+
+			.card-tag {
+				font-size: 0.75rem;
+				color: var(--accent);
+				background: rgba(249, 115, 22, 0.1);
+				padding: 0.15rem 0.5rem;
+				border-radius: 4px;
+				font-family: var(--font-mono);
+				letter-spacing: -0.02em;
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<div class="filter-container">
+				<button class="scroll-btn left" aria-label="Scroll left">
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+				</button>
+				<div class="filter-bar">
+					<button class="filter-tag active" data-tag="all">All</button>
+					{tags.map((tag) => (
+						<button class="filter-tag" data-tag={tag}>{toTitle(tag)}</button>
+					))}
+				</div>
+				<button class="scroll-btn right" aria-label="Scroll right">
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+				</button>
+			</div>
+
+			<section>
+				<ul id="post-grid">
+					{
+						posts.map((post) => (
+							<li class="post-item" data-tags={post.data.tags ? post.data.tags.join(',') : ''}>
+								<a href={withBase(`/blog/${post.id}/`)} class="post-link">
+									<h4 class="title">{post.data.title}</h4>
+									<p class="date">
+										<FormattedDate date={post.data.pubDate} />
+									</p>
+									{post.data.tags && post.data.tags.length > 0 && (
+										<div class="card-tags">
+											{post.data.tags.slice(0, 3).map((tag) => (
+												<span class="card-tag">#{tag}</span>
+											))}
+										</div>
+									)}
+								</a>
+							</li>
+						))
+					}
+				</ul>
+			</section>
+		</main>
+		<Footer />
+
+		<script>
+			// Client-side filtering logic
+			document.addEventListener('DOMContentLoaded', () => {
+				const filterButtons = document.querySelectorAll('.filter-tag');
+				const posts = document.querySelectorAll('.post-item');
+
+				filterButtons.forEach(button => {
+					button.addEventListener('click', () => {
+						const selectedTag = button.getAttribute('data-tag');
+
+						// Update active state
+						filterButtons.forEach(btn => btn.classList.remove('active'));
+						button.classList.add('active');
+
+						// Filter posts
+						posts.forEach(post => {
+							const postTags = post.getAttribute('data-tags')?.split(',') || [];
+
+							if (selectedTag === 'all' || postTags.includes(selectedTag!)) {
+								post.classList.remove('hidden');
+								// Add a small fade-in animation
+								(post as HTMLElement).style.opacity = '0';
+								setTimeout(() => {
+									(post as HTMLElement).style.opacity = '1';
+								}, 50);
+							} else {
+								post.classList.add('hidden');
+							}
+						});
+					});
+				});
+
+				// Scroll logic
+				const filterBar = document.querySelector('.filter-bar');
+				const leftBtn = document.querySelector('.scroll-btn.left');
+				const rightBtn = document.querySelector('.scroll-btn.right');
+
+				if (filterBar && leftBtn && rightBtn) {
+					const updateButtons = () => {
+						const { scrollLeft, scrollWidth, clientWidth } = filterBar;
+
+						if (scrollLeft > 10) {
+							leftBtn.classList.add('visible');
+						} else {
+							leftBtn.classList.remove('visible');
+						}
+
+						// Use Math.ceil to handle subpixel rendering
+						if (Math.ceil(scrollLeft + clientWidth) < scrollWidth - 10) {
+							rightBtn.classList.add('visible');
+						} else {
+							rightBtn.classList.remove('visible');
+						}
+					};
+
+					leftBtn.addEventListener('click', () => {
+						filterBar.scrollBy({ left: -300, behavior: 'smooth' });
+					});
+
+					rightBtn.addEventListener('click', () => {
+						filterBar.scrollBy({ left: 300, behavior: 'smooth' });
+					});
+
+					filterBar.addEventListener('scroll', updateButtons, { passive: true });
+					window.addEventListener('resize', updateButtons);
+					// Initial check after layout
+					setTimeout(updateButtons, 100);
+				}
+			});
+		</script>
+	</body>
+</html>

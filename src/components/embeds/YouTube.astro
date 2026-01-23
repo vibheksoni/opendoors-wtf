@@ -1,0 +1,42 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+interface Props extends HTMLAttributes<'iframe'> {
+	id?: string;
+	url?: string;
+	title?: string;
+}
+
+const { id, url, title = 'YouTube video', ...rest } = Astro.props;
+const videoId = id ?? (url ? new URL(url).searchParams.get('v') ?? url.split('/').pop() : undefined);
+const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}` : undefined;
+---
+
+{embedUrl ? (
+	<div class="youtube-embed">
+		<iframe
+			src={embedUrl}
+			title={title}
+			loading="lazy"
+			allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+			allowfullscreen
+			{...rest}
+		/>
+	</div>
+) : null}
+
+<style>
+	.youtube-embed {
+		aspect-ratio: 16 / 9;
+		width: 100%;
+		position: relative;
+	}
+	.youtube-embed iframe {
+		border: 0;
+		height: 100%;
+		width: 100%;
+		position: absolute;
+		left: 0;
+		top: 0;
+	}
+</style>

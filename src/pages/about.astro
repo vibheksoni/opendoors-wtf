@@ -1,0 +1,50 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { siteConfig } from '../config/site';
+import { buildBreadcrumbJsonLd, buildOrganizationJsonLd } from '../utils/jsonLd';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead
+			title="About"
+			description={SITE_DESCRIPTION}
+			jsonLd={[
+				buildBreadcrumbJsonLd([
+					{ name: 'Home', url: Astro.site?.toString() ?? siteConfig.site },
+					{ name: 'About', url: new URL('/about/', Astro.site ?? siteConfig.site).toString() },
+				]),
+				buildOrganizationJsonLd(siteConfig.site, siteConfig.author.name, [
+					siteConfig.socials.github,
+					siteConfig.socials.x,
+					siteConfig.socials.youtube,
+					siteConfig.socials.linkedin,
+					siteConfig.socials.instagram,
+				]),
+			]}
+		/>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<h1>About</h1>
+			<p>
+				OpenDoors is my logbook for security research, backend engineering, and the production lessons
+				that surface while building real systems. I focus on responsible disclosure, defensive design,
+				and clear explanations that hold up under scrutiny.
+			</p>
+			<p>
+				I publish case studies, tooling breakdowns, and security notes with an emphasis on how to prevent
+				abuse and ship resilient infrastructure. Expect practical writeups, not fluff.
+			</p>
+			<p>
+				Connect with me on GitHub, X, and YouTube for updates and deeper walkthroughs.
+			</p>
+		</main>
+		<Footer />
+	</body>
+</html>

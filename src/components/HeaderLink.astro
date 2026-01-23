@@ -1,0 +1,53 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+type Props = HTMLAttributes<'a'>;
+
+const { href, class: className, ...props } = Astro.props;
+const normalizedHref = typeof href === 'string' ? href.replace(/\/$/, '') : href;
+
+const baseUrl = import.meta.env.BASE_URL;
+let rawPathname = Astro.url.pathname;
+
+// Strip base URL if present and not just root
+if (baseUrl !== '/' && rawPathname.startsWith(baseUrl)) {
+	rawPathname = rawPathname.slice(baseUrl.length);
+}
+
+// Ensure consistent leading slash for root-relative comparison
+if (!rawPathname.startsWith('/')) {
+	rawPathname = '/' + rawPathname;
+}
+
+const pathname = rawPathname.replace(/\/$/, '');
+const subpath = pathname.match(/[^\/]+/g);
+const isActive = normalizedHref === pathname || normalizedHref === '/' + (subpath?.[0] || '');
+---
+
+<a href={href} class:list={[className, { active: isActive }]} {...props}>
+	<slot />
+</a>
+<style>
+	a {
+		display: inline-block;
+		text-decoration: none;
+		padding: 0.4rem 0.8rem;
+		font-size: 0.9rem;
+		color: #94a3b8; /* silver-dim */
+		border-radius: 6px;
+		transition: all 0.2s ease;
+		font-weight: 500;
+		letter-spacing: -0.01em;
+	}
+
+	a:hover {
+		color: #fff;
+		background: rgba(255, 255, 255, 0.05);
+	}
+
+	a.active {
+		color: #f97316; /* accent */
+		background: rgba(249, 115, 22, 0.1);
+		box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.2);
+	}
+</style>

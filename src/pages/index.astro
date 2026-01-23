@@ -1,0 +1,396 @@
+---
+import { getCollection } from 'astro:content';
+import { Image } from 'astro:assets';
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import Header from '../components/Header.astro';
+import { siteConfig } from '../config/site';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { buildBreadcrumbJsonLd, buildOrganizationJsonLd, buildWebSiteJsonLd } from '../utils/jsonLd';
+import { collectTags, sortPosts } from '../utils/posts';
+import { toTitle } from '../utils/tags';
+import pfp from '../assets/pfp.webp';
+
+const posts = sortPosts(await getCollection('blog'));
+const tags = collectTags(posts);
+const jsonLd = [
+	buildWebSiteJsonLd(siteConfig.site, SITE_TITLE, SITE_DESCRIPTION),
+	buildOrganizationJsonLd(siteConfig.site, siteConfig.author.name, [
+		siteConfig.socials.github,
+		siteConfig.socials.x,
+		siteConfig.socials.youtube,
+		siteConfig.socials.linkedin,
+		siteConfig.socials.instagram,
+	]),
+	buildBreadcrumbJsonLd([
+		{ name: 'Home', url: Astro.site?.toString() ?? siteConfig.site },
+	]),
+];
+
+const basePath = import.meta.env.BASE_URL;
+const withBase = (path: string) => {
+	const normalized = path.replace(/^\//, '');
+	return basePath.endsWith('/') ? `${basePath}${normalized}` : `${basePath}/${normalized}`;
+};
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} jsonLd={jsonLd} />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<section class="hero">
+				<div class="hero-content">
+					<div class="avatar-container">
+						<Image src={pfp} alt="Vibhek Soni" width={160} height={160} class="avatar" loading="eager" />
+						<div class="avatar-glow"></div>
+					</div>
+					<div class="intro-text">
+						<h1>Hey, I'm Vibhek.</h1>
+						<p>
+							Welcome to <strong>OpenDoors</strong>. This is my logbook for security research, backend engineering, and the production lessons that surface while building real systems.
+						</p>
+					</div>
+				</div>
+				<div class="cta-row">
+					<a class="cta" href={withBase('/blog/')}>Read the blog</a>
+					<a class="cta ghost" href={withBase('/about/')}>About</a>
+				</div>
+			</section>
+
+			<section class="latest">
+				<h2>Latest posts</h2>
+				<ul>
+					{posts.slice(0, 4).map((post) => (
+						<li>
+							<a href={withBase(`/blog/${post.id}/`)} class="card">
+								<h3>{post.data.title}</h3>
+								<p>{post.data.description}</p>
+								<div class="meta-row">
+									<div class="date">
+										<FormattedDate date={post.data.pubDate} />
+									</div>
+									<svg class="card-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+										<path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+									</svg>
+								</div>
+							</a>
+						</li>
+					))}
+				</ul>
+			</section>
+
+			<section class="tags">
+				<h2>Tags</h2>
+				<ul>
+					{tags.map((tag) => (
+						<li>
+							<a href={withBase(`/tags/${tag}/`)}>{toTitle(tag)}</a>
+						</li>
+					))}
+				</ul>
+			</section>
+		</main>
+		<Footer />
+	</body>
+</html>
+
+<style>
+	main {
+		display: flex;
+		flex-direction: column;
+		gap: 6rem; /* Breathing room */
+	}
+
+	h1 {
+		margin-bottom: 1.5rem;
+	}
+
+	/* Hero Section */
+	.hero {
+		display: flex;
+		flex-direction: column;
+		gap: 3rem;
+		margin-bottom: 6rem;
+		padding-top: 2rem;
+	}
+
+	.hero-content {
+		display: flex;
+		align-items: center;
+		gap: 3.5rem;
+	}
+
+	.avatar-container {
+		position: relative;
+		flex-shrink: 0;
+	}
+
+	.avatar {
+		border-radius: 50%;
+		border: 2px solid var(--border-subtle);
+		object-fit: cover;
+		z-index: 2;
+		position: relative;
+		box-shadow: 0 0 40px -10px rgba(0,0,0,0.5);
+	}
+
+	.avatar-glow {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 120%;
+		height: 120%;
+		background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+		filter: blur(30px);
+		opacity: 0.25;
+		z-index: 1;
+		pointer-events: none;
+	}
+
+	.intro-text h1 {
+		margin: 0 0 1rem 0;
+		line-height: 1.1;
+	}
+
+	.intro-text p {
+		margin: 0;
+		font-size: 1.15rem;
+		max-width: 600px;
+		line-height: 1.6;
+		color: var(--text-muted);
+	}
+
+	section > p {
+		/* Overridden by specific hero styling but kept for fallback */
+		max-width: 600px;
+		font-size: 1.15rem;
+		line-height: 1.6;
+		color: var(--text-muted);
+	}
+
+	@media (max-width: 640px) {
+		.hero-content {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 1.5rem;
+		}
+
+		.avatar-container {
+			width: 80px;
+			height: 80px;
+		}
+
+		.avatar {
+			width: 80px;
+			height: 80px;
+		}
+	}
+
+	section ul {
+		list-style: none;
+		padding: 0;
+		margin: 1.5rem 0 0;
+		display: grid;
+		gap: 2rem;
+	}
+
+	/* Hero Buttons */
+	.cta-row {
+		display: flex;
+		gap: 1rem;
+		margin-top: 2.5rem;
+	}
+
+	.cta {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.75rem 1.5rem;
+		background: transparent; /* Transparent background */
+		color: #fff;
+		text-decoration: none;
+		font-weight: 600;
+		font-size: 1rem;
+		transition: all 0.2s ease;
+		position: relative;
+	}
+
+	/* Corner Borders Effect */
+	.cta::before,
+	.cta::after {
+		content: '';
+		position: absolute;
+		width: 12px;
+		height: 12px;
+		border: 2px solid transparent;
+		transition: all 0.3s ease;
+	}
+
+	/* Top Left Corner */
+	.cta::before {
+		top: 0;
+		left: 0;
+		border-top-color: var(--accent);
+		border-left-color: var(--accent);
+	}
+
+	/* Bottom Right Corner */
+	.cta::after {
+		bottom: 0;
+		right: 0;
+		border-bottom-color: var(--accent);
+		border-right-color: var(--accent);
+	}
+
+	.cta:hover {
+		color: var(--accent);
+		background: rgba(249, 115, 22, 0.05);
+	}
+
+	.cta:hover::before,
+	.cta:hover::after {
+		width: 100%;
+		height: 100%;
+	}
+
+	.cta.ghost {
+		color: var(--text-muted);
+	}
+
+	.cta.ghost::before {
+		border-color: var(--border-subtle);
+		border-right: none;
+		border-bottom: none;
+	}
+
+	.cta.ghost::after {
+		border-color: var(--border-subtle);
+		border-left: none;
+		border-top: none;
+	}
+
+	.cta.ghost:hover {
+		color: #fff;
+	}
+
+	.cta.ghost:hover::before,
+	.cta.ghost:hover::after {
+		border-color: #fff;
+	}
+
+	/* Latest Posts Cards */
+	.latest ul {
+		grid-template-columns: 1fr;
+	}
+
+	.latest ul li {
+		display: flex;
+	}
+
+	.latest .card {
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+		height: 100%;
+		border: 1px solid var(--border-subtle);
+		border-radius: 8px;
+		padding: 2rem;
+		text-decoration: none;
+		color: inherit;
+		background: rgba(10, 10, 10, 0.6);
+		position: relative;
+		overflow: hidden;
+		transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+	}
+
+	.latest .card:hover {
+		transform: translateY(-4px);
+		border-color: var(--accent); /* Orange border on hover */
+		background: rgba(15, 15, 15, 0.9);
+		box-shadow: 0 10px 30px -10px rgba(249, 115, 22, 0.15); /* Orange glow */
+	}
+
+	.latest .card h3 {
+		margin: 0 0 0.75rem 0;
+		font-size: 1.5rem;
+		color: #fff;
+		transition: color 0.2s;
+	}
+
+	.latest .card:hover h3 {
+		color: var(--accent);
+	}
+
+	.latest .card p {
+		color: var(--text-muted);
+		margin-bottom: 1.5rem;
+		line-height: 1.6;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+
+	.meta-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-top: auto;
+	}
+
+	.date {
+		color: var(--silver-dim);
+		font-size: 0.85rem;
+		font-family: var(--font-mono);
+		opacity: 0.8;
+	}
+
+	.card-arrow {
+		color: var(--text-muted);
+		transition: transform 0.2s, color 0.2s;
+	}
+
+	.card:hover .card-arrow {
+		transform: translateX(4px);
+		color: var(--accent);
+	}
+
+	/* Tags */
+	.tags ul {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.tags a {
+		background: rgba(255, 255, 255, 0.03);
+		border-radius: 6px;
+		padding: 0.4rem 1rem;
+		text-decoration: none;
+		color: var(--text-muted);
+		border: 1px solid var(--border-subtle);
+		font-size: 0.9rem;
+		transition: all 0.2s;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		font-weight: 500;
+	}
+
+	.tags a:hover {
+		color: #fff;
+		background: rgba(255, 255, 255, 0.08);
+		border-color: var(--border-hover);
+	}
+
+	@media (min-width: 768px) {
+		.latest ul {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+</style>

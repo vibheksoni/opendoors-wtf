@@ -1,0 +1,176 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import Header from '../components/Header.astro';
+import { siteConfig } from '../config/site';
+import { buildBlogPostingJsonLd, buildBreadcrumbJsonLd } from '../utils/jsonLd';
+import { toTitle } from '../utils/tags';
+
+type Props = CollectionEntry<'blog'>['data'];
+
+const { title, description, pubDate, updatedDate, heroImage, tags, canonical } = Astro.props;
+const pageUrl = new URL(Astro.url.pathname, Astro.site).toString();
+const heroUrl = heroImage ? new URL(heroImage.src, Astro.url).toString() : undefined;
+const breadcrumb = buildBreadcrumbJsonLd([
+	{ name: 'Home', url: Astro.site?.toString() ?? siteConfig.site },
+	{ name: 'Blog', url: new URL('/blog/', Astro.site ?? siteConfig.site).toString() },
+	{ name: title, url: pageUrl },
+]);
+const blogJsonLd = buildBlogPostingJsonLd({
+	siteUrl: siteConfig.site,
+	title,
+	description,
+	url: pageUrl,
+	image: heroUrl,
+	datePublished: pubDate.toISOString(),
+	dateModified: updatedDate?.toISOString(),
+	authorName: siteConfig.author.name,
+	authorUrl: siteConfig.author.url,
+	keywords: tags,
+});
+
+const basePath = import.meta.env.BASE_URL;
+const withBase = (path: string) => {
+	const normalized = path.replace(/^\//, '');
+	return basePath.endsWith('/') ? `${basePath}${normalized}` : `${basePath}/${normalized}`;
+};
+---
+
+<html lang="en">
+	<head>
+		<BaseHead title={title} description={description} image={heroImage} ogType="article" canonical={canonical} jsonLd={[breadcrumb, blogJsonLd]} />
+		<style>
+			main {
+				width: 100%;
+				max-width: 100%;
+				margin: 0;
+				/* Padding is handled in global.css, but we might need extra for the hero image */
+			}
+			.hero-image {
+				width: 100%;
+				max-width: 1020px;
+				margin: 0 auto 2rem;
+				padding: 0 1rem;
+			}
+			.hero-image img {
+				display: block;
+				margin: 0 auto;
+				border-radius: 16px;
+				box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
+				border: 1px solid var(--border-subtle);
+			}
+			.prose {
+				width: 720px;
+				max-width: calc(100% - 2em);
+				margin: auto;
+				padding: 1em;
+				color: var(--text-muted);
+			}
+			.title {
+				margin-bottom: 2em;
+				padding: 1em 0;
+				text-align: center;
+				line-height: 1;
+			}
+			.title h1 {
+				margin: 0.5em 0;
+				color: #fff;
+			}
+			.date {
+				margin-bottom: 0.5em;
+				color: var(--text-muted);
+				font-size: 0.95rem;
+			}
+			.last-updated-on {
+				font-style: italic;
+				font-size: 0.9em;
+				opacity: 0.8;
+			}
+			.tag-list {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.5rem;
+				justify-content: center;
+				margin: 1.5rem 0 0;
+				padding: 0;
+				list-style: none;
+			}
+			.tag-list a {
+				background: rgba(255, 255, 255, 0.05);
+				border: 1px solid var(--border-subtle);
+				border-radius: 999px;
+				color: var(--text-muted);
+				display: inline-flex;
+				font-size: 0.85rem;
+				padding: 0.35rem 0.85rem;
+				text-decoration: none;
+				transition: all 0.2s;
+			}
+			.tag-list a:hover {
+				color: #fff;
+				background: rgba(255, 255, 255, 0.1);
+				border-color: var(--accent);
+			}
+			.coffee-cta-article {
+				margin-top: 4rem;
+				padding: 1.5rem;
+				background: rgba(255, 255, 255, 0.03);
+				border: 1px solid var(--border-subtle);
+				border-radius: 8px;
+				text-align: center;
+			}
+			.coffee-cta-article p {
+				margin: 0;
+				color: var(--text-muted);
+			}
+			.coffee-cta-article a {
+				color: var(--accent);
+				font-weight: 600;
+			}
+		</style>
+	</head>
+
+	<body>
+		<Header />
+		<main>
+			<article>
+				<figure class="hero-image">
+					{heroImage && <Image width={1020} height={510} src={heroImage} alt={title} />}
+				</figure>
+				<div class="prose">
+					<header class="title">
+						<div class="date">
+							<FormattedDate date={pubDate} />
+							{
+								updatedDate && (
+									<div class="last-updated-on">
+										Last updated on <FormattedDate date={updatedDate} />
+									</div>
+								)
+							}
+						</div>
+						<h1>{title}</h1>
+						{tags?.length ? (
+							<ul class="tag-list">
+								{tags.map((tag) => (
+									<li>
+										<a href={withBase(`/tags/${tag}/`)}>{toTitle(tag)}</a>
+									</li>
+								))}
+							</ul>
+						) : null}
+						<hr />
+					</header>
+					<slot />
+					<div class="coffee-cta-article">
+						<p>Enjoyed this post? <a href={siteConfig.socials.buymeacoffee} target="_blank">Buy me a coffee ☕</a> to support my work.</p>
+					</div>
+				</div>
+			</article>
+		</main>
+		<Footer />
+	</body>
+</html>

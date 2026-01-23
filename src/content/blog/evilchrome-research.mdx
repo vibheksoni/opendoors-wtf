@@ -1,0 +1,82 @@
+---
+title: "EvilChrome: Chrome Security Research PoC"
+description: "A proof-of-concept exploring how Chrome browser instances can be manipulated for malicious purposes. This research highlights the risks of browser binary replacement attacks."
+pubDate: 2024-01-24
+tags:
+  - browser security
+  - chrome
+  - research
+  - python
+---
+
+## The Concept
+
+What if an attacker could replace a target's Chrome browser binary with a malicious version that launches a Chrome instance controlled by an external program? This would give an attacker complete control over the user's browsing activity while maintaining the appearance of a normal browser.
+
+## Technical Implementation
+
+The PoC leverages several key components:
+
+### Binary Replacement
+
+- Replaces the legitimate Chrome binary with a modified version
+- Maintains all original Chrome functionality
+- Seamlessly integrates with the system
+
+### Profile Loading
+
+- Loads the user's existing Chrome profile
+- Maintains access to saved passwords, bookmarks, and history
+- Creates a completely authentic browsing environment
+
+### Browser Control
+
+- Uses Selenium for browser automation
+- Implements real-time monitoring of all browser activities
+- Captures form submissions, cookies, and session data
+
+### Stealth Operations
+
+- Integrates the undetected-chromedriver library
+- Bypasses common browser automation detection systems
+- Appears as a legitimate browser instance
+
+## Security Implications
+
+This research exposes several critical security concerns:
+
+### Profile Access
+
+- Complete access to saved credentials
+- Access to authentication tokens and cookies
+- Ability to hijack existing sessions
+
+### Data Interception
+
+- Real-time monitoring of form submissions
+- Capture of sensitive input data
+- Interception of authentication flows
+
+### Session Control
+
+- Ability to maintain persistent access
+- Manipulation of active sessions
+- Cross-origin request capabilities
+
+## Mitigation Strategies
+
+To protect against such attacks, organizations and users should:
+
+- Implement strict binary verification
+- Use hardware security modules where possible
+- Monitor for unauthorized binary modifications
+- Implement application allowlisting
+- Conduct regular security audits of installed applications
+
+## Credits
+
+This research uses the [undetected-chromedriver](https://github.com/ultrafunkamsterdam/undetected-chromedriver) library.
+
+## Disclaimer
+
+This research is published for educational purposes only. The concepts and techniques described here should only be used in authorized security research and testing environments. Any malicious use of these concepts is strictly prohibited and may be illegal in your jurisdiction.

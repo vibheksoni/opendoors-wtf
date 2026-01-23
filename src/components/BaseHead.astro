@@ -1,0 +1,83 @@
+---
+import '../styles/global.css';
+import type { ImageMetadata } from 'astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { siteConfig } from '../config/site';
+
+interface Props {
+	title?: string;
+	description?: string;
+	image?: ImageMetadata;
+	canonical?: string;
+	ogType?: 'website' | 'article';
+	noIndex?: boolean;
+	jsonLd?: Record<string, unknown> | Array<Record<string, unknown>>;
+}
+
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+const withBase = (path: string) => `${basePath}${path}`;
+
+const {
+	title = SITE_TITLE,
+	description = SITE_DESCRIPTION,
+	image,
+	canonical,
+	ogType = 'website',
+	noIndex = false,
+	jsonLd,
+} = Astro.props;
+
+const pageTitle = title === SITE_TITLE ? SITE_TITLE : `${title} | ${SITE_TITLE}`;
+const canonicalHref = canonical ?? canonicalURL.toString();
+const ogImage = image?.src
+	? new URL(image.src, Astro.url).toString()
+	: new URL(siteConfig.defaults.ogImage, Astro.site).toString();
+const jsonLdBlocks = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
+const keywords = siteConfig.defaults.keywords.join(', ');
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="icon" href={withBase('/favicon.ico')} sizes="any" />
+<link rel="icon" type="image/png" sizes="32x32" href={withBase('/favicon-32x32.png')} />
+<link rel="icon" type="image/png" sizes="16x16" href={withBase('/favicon-16x16.png')} />
+<link rel="apple-touch-icon" href={withBase('/apple-touch-icon.png')} />
+<link rel="manifest" href={withBase('/site.webmanifest')} />
+<link rel="sitemap" href={withBase('/sitemap-index.xml')} />
+<link rel="alternate" type="application/rss+xml" title={SITE_TITLE} href={new URL('rss.xml', Astro.site)} />
+<meta name="generator" content={Astro.generator} />
+<meta name="theme-color" content="#050505" />
+
+<link rel="preload" href={withBase('/fonts/atkinson-regular.woff')} as="font" type="font/woff" crossorigin />
+<link rel="preload" href={withBase('/fonts/atkinson-bold.woff')} as="font" type="font/woff" crossorigin />
+
+<link rel="canonical" href={canonicalHref} />
+
+<title>{pageTitle}</title>
+<meta name="title" content={pageTitle} />
+<meta name="description" content={description} />
+<meta name="keywords" content={keywords} />
+
+{noIndex && <meta name="robots" content="noindex,nofollow" />}
+
+<meta property="og:type" content={ogType} />
+<meta property="og:url" content={Astro.url} />
+<meta property="og:title" content={pageTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:site_name" content={SITE_TITLE} />
+<meta property="og:locale" content={siteConfig.defaults.locale} />
+
+<meta property="twitter:card" content={siteConfig.defaults.twitterCard} />
+<meta property="twitter:url" content={Astro.url} />
+<meta property="twitter:title" content={pageTitle} />
+<meta property="twitter:description" content={description} />
+<meta property="twitter:image" content={ogImage} />
+<meta property="twitter:site" content={siteConfig.author.twitter} />
+<meta property="twitter:creator" content={siteConfig.author.twitter} />
+<meta property="twitter:domain" content={new URL(siteConfig.site).hostname} />
+
+{jsonLdBlocks.map((block) => (
+	<script type="application/ld+json" set:html={JSON.stringify(block)} />
+))}
