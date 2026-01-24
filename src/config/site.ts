@@ -13,7 +13,7 @@ export const siteConfig = {
 		github: 'https://github.com/vibheksoni',
 		x: 'https://x.com/ImVibhek',
 		youtube: 'https://www.youtube.com/@vibheksoni',
-		linkedin: 'https://www.linkedin.com/in/vibhek-soni-11126939b/',
+		linkedin: 'https://www.linkedin.com/in/vibheksoni/',
 		instagram: 'https://www.instagram.com/nyc.vibhek/',
 		buymeacoffee: 'https://buymeacoffee.com/vibheksoni',
 	},
