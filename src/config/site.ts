@@ -16,6 +16,8 @@ export const siteConfig = {
 		linkedin: 'https://www.linkedin.com/in/vibheksoni/',
 		instagram: 'https://www.instagram.com/nyc.vibhek/',
 		buymeacoffee: 'https://buymeacoffee.com/vibheksoni',
+		devagency: 'https://devhivestudios.com/',
+		discord: '1codec',
 	},
 	defaults: {
 		ogImage: '/logo.png',

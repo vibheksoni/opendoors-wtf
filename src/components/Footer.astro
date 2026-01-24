@@ -14,7 +14,8 @@ const today = new Date();
 			&copy; {today.getFullYear()} {siteConfig.author.name}. All rights reserved.
 		</div>
 		<div class="coffee-cta">
-			Like my work? <a href={siteConfig.socials.buymeacoffee} target="_blank">Buy me a coffee ☕</a>
+			<p>Like my work? <a href={siteConfig.socials.buymeacoffee} target="_blank">Buy me a coffee ☕</a></p>
+			<p class="agency-cta">Need a project done? <a href={siteConfig.socials.devagency} target="_blank">Work with me at DevHive Studios 🐝</a></p>
 		</div>
 		<div class="social-links">
 			<a href={siteConfig.socials.x} target="_blank" rel="noreferrer" aria-label="X (Twitter)">
@@ -65,6 +66,9 @@ const today = new Date();
 					></path>
 				</svg>
 			</a>
+		</div>
+		<div class="discord-tag">
+			Add me on Discord: <strong>{siteConfig.socials.discord}</strong>
 		</div>
 	</div>
 </footer>
@@ -183,6 +187,12 @@ const today = new Date();
 		color: #fff;
 	}
 
+	.agency-cta {
+		margin-top: 0.5em;
+		font-size: 0.9em;
+		opacity: 0.9;
+	}
+
 	.social-links {
 		display: flex;
 		justify-content: center;
@@ -200,5 +210,16 @@ const today = new Date();
 	.social-links a:hover {
 		color: #fff;
 		transform: scale(1.1);
+	}
+
+	.discord-tag {
+		margin-top: 1em;
+		font-size: 0.9em;
+		color: #71717a;
+	}
+
+	.discord-tag strong {
+		color: #e2e8f0;
+		font-family: var(--font-mono);
 	}
 </style>

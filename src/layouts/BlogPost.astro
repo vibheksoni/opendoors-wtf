@@ -130,6 +130,12 @@ const withBase = (path: string) => {
 				color: var(--accent);
 				font-weight: 600;
 			}
+			.agency-cta-article {
+				margin-top: 0.75rem !important;
+				padding-top: 0.75rem;
+				border-top: 1px solid var(--border-subtle);
+				font-size: 0.95rem;
+			}
 		</style>
 	</head>
 
@@ -167,6 +173,7 @@ const withBase = (path: string) => {
 					<slot />
 					<div class="coffee-cta-article">
 						<p>Enjoyed this post? <a href={siteConfig.socials.buymeacoffee} target="_blank">Buy me a coffee ☕</a> to support my work.</p>
+						<p class="agency-cta-article">Need a project done? <a href={siteConfig.socials.devagency} target="_blank">Hire DevHive Studios 🐝</a></p>
 					</div>
 				</div>
 			</article>
