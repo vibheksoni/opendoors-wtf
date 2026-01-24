@@ -22,6 +22,12 @@ const withBase = (path: string) => {
 			<HeaderLink href={withBase('/')}>Home</HeaderLink>
 			<HeaderLink href={withBase('/blog/')}>Blog</HeaderLink>
 			<HeaderLink href={withBase('/about/')}>About</HeaderLink>
+			<a href="https://vibheksoni.com/" target="_blank" rel="noreferrer" class="portfolio-link">
+				Portfolio
+				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 3px; margin-top: 1px;">
+					<path d="M7 17l9.2-9.2M17 17V7H7" />
+				</svg>
+			</a>
 		</div>
 
 		<div class="social-links">
@@ -114,6 +120,24 @@ const withBase = (path: string) => {
 		display: flex;
 		align-items: center;
 		gap: 0.25rem;
+	}
+
+	.portfolio-link {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.4rem 0.8rem;
+		font-size: 0.9rem;
+		color: #94a3b8;
+		text-decoration: none;
+		border-radius: 6px;
+		transition: all 0.2s ease;
+		font-weight: 500;
+		letter-spacing: -0.01em;
+	}
+
+	.portfolio-link:hover {
+		color: #fff;
+		background: rgba(255, 255, 255, 0.05);
 	}
 
 	.social-links {
