@@ -17,7 +17,6 @@ export const siteConfig = {
 		instagram: 'https://www.instagram.com/nyc.vibhek/',
 		buymeacoffee: 'https://buymeacoffee.com/vibheksoni',
 		devagency: 'https://devhivestudios.com/',
-		discord: '1codec',
 	},
 	defaults: {
 		ogImage: '/logo.png',
