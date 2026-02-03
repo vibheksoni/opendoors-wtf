@@ -10,7 +10,7 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 import { buildBreadcrumbJsonLd, buildOrganizationJsonLd, buildWebSiteJsonLd } from '../utils/jsonLd';
 import { collectTags, sortPosts } from '../utils/posts';
 import { toTitle } from '../utils/tags';
-import pfp from '../assets/pfp.webp';
+import pfp from '../assets/pfp.png';
 
 const posts = sortPosts(await getCollection('blog'));
 const tags = collectTags(posts);
