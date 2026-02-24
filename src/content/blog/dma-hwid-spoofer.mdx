@@ -1,0 +1,257 @@
+---
+title: "Building the First Open-Source DMA HWID Spoofer"
+description: "How I reverse engineered Windows 11 kernel drivers with IDA Pro to build a DMA-based hardware ID spoofer in Rust — covering PatchGuard, DSE, SMBIOS, and 12 spoofing modules."
+pubDate: 2025-02-24
+tags:
+  - reverse engineering
+  - dma
+  - kernel security
+  - windows internals
+---
+
+## Why I Built This
+
+Every DMA-based HWID spoofer out there is closed-source, paid, or both. Some sell for thousands of dollars. The techniques aren't secret — they're well-documented across research blogs and forums — but nobody had put together a complete, open-source implementation.
+
+So I built one. Written in Rust, covering 12 hardware spoofing modules, with PatchGuard bypass and DSE patching. The full source is on [GitHub](https://github.com/vibheksoni/dma-spoofer).
+
+This post walks through the reverse engineering process, the kernel internals I had to understand, and how each piece fits together.
+
+## What is DMA and Why Does It Matter
+
+Direct Memory Access (DMA) is a hardware feature that allows devices to read and write system memory without going through the CPU. In normal operation, this is how your NVMe drive, GPU, and network card move data efficiently.
+
+But when you plug in an FPGA-based PCIe device (like a PCIeSquirrel or similar board), you get the same unrestricted access to physical memory. The OS doesn't mediate these reads and writes — they happen at the hardware level, below the kernel.
+
+This means you can:
+- Read and write any physical memory address
+- Modify kernel structures in real-time
+- Bypass software-based protections entirely
+
+The tool uses [MemProcFS](https://github.com/ufrisk/MemProcFS) by ufrisk as the DMA engine interface. It abstracts the FPGA communication and provides a clean API for memory operations:
+
+```rust
+pub struct Dma<'a> {
+    vmm: Vmm<'a>,
+}
+
+impl<'a> Dma<'a> {
+    pub fn new() -> Result<Self> {
+        let args = vec!["-device", "fpga", "-waitinitialize"];
+        let vmm = Vmm::new("vmm.dll", &args)?;
+        Ok(Self { vmm })
+    }
+
+    pub fn read_phys(&self, addr: u64, size: usize) -> Result<Vec<u8>> {
+        self.vmm.mem_read_ex(addr, size, FLAG_NOCACHE)
+    }
+
+    pub fn write_phys(&self, addr: u64, data: &[u8]) -> Result<()> {
+        self.vmm.mem_write(addr, data)
+    }
+}
+```
+
+## The Reverse Engineering Process
+
+I spent a significant amount of time in IDA Pro disassembling Windows 11 kernel drivers. The goal was to find the exact memory offsets and structures needed to locate and modify hardware identifiers.
+
+### Finding Kernel Structures
+
+The first step for every spoofing module is the same: find where Windows stores the data in kernel memory. This means:
+
+1. Loading the target driver (e.g., `ntoskrnl.exe`, `CI.dll`, `nvlddmkm.sys`, `dxgkrnl.sys`) into IDA Pro
+2. Identifying exported functions and following cross-references
+3. Mapping out the internal data structures and their offsets
+4. Validating offsets against the live system via DMA reads
+
+For example, SMBIOS tables are stored at a physical address referenced by `ntoskrnl.exe`. I found the offset by tracing how `WmipFindSMBiosStructure` accesses the SMBIOS entry point, then confirmed it by reading the physical memory and parsing the SMBIOS header format.
+
+### Build-Specific Offsets
+
+One of the biggest challenges is that kernel structure offsets change between Windows builds. The spoofer detects the Windows build number and selects the correct offsets:
+
+```rust
+let build_number = Self::get_build_number(dma)?;
+
+let cip_init_va = if build_number < WIN10_1709_BUILD {
+    scanner.find_cip_initialize_pre_1709(ci_init_offset)?
+} else if build_number < WIN11_24H2_BUILD {
+    scanner.find_cip_initialize_post_1709(ci_init_offset)?
+} else {
+    scanner.find_cip_initialize_24h2(ci_init_offset)?
+};
+```
+
+This was built and tested specifically on Windows 11 Pro Build 26100 (24H2). Supporting other builds would require extracting their offsets — which is why the project is open-source.
+
+## Defeating Windows Kernel Protections
+
+Before you can modify anything in kernel memory, you need to deal with two major protections: Driver Signature Enforcement (DSE) and PatchGuard (Kernel Patch Protection / KPP).
+
+### Patching DSE via CI.dll
+
+DSE prevents unsigned drivers from loading. The enforcement lives in `CI.dll`, specifically in a global variable called `g_CiOptions`. When this value is `0x00000006`, DSE is enabled. Set it to `0x00000000`, and signature checks are disabled.
+
+The challenge is *finding* `g_CiOptions` in memory. It's not exported. I had to trace through `CI.dll` in IDA Pro:
+
+1. Find the exported function `CiInitialize`
+2. Follow the call chain into `CipInitialize` (an internal function)
+3. Locate the `mov` instruction that references `g_CiOptions`
+4. Extract the RVA and resolve it to a virtual address
+
+The pattern scanning differs across Windows versions. Microsoft restructured `CipInitialize` in 24H2, so I had to write a separate scanner for that build:
+
+```rust
+pub fn disable_dse(&mut self) -> Result<()> {
+    let va = self.find_g_ci_options()?;
+    let current = self.dma.read_u32(KERNEL_PID, va)?;
+
+    // Save original for restoration
+    self.original_value = Some(current);
+
+    // Patch to disabled
+    self.dma.write(KERNEL_PID, va, &DSE_DISABLED.to_le_bytes())?;
+
+    // Verify the write
+    let verify = self.dma.read_u32(KERNEL_PID, va)?;
+    if verify != DSE_DISABLED {
+        return Err(anyhow!("DSE patch verification failed"));
+    }
+    Ok(())
+}
+```
+
+This approach is well-documented in the security research community. The blog post ["The dusk of g_CiOptions"](https://blog.cryptoplague.net/main/research/windows-research/the-dusk-of-g_cioptions-circumventing-dse-with-vbs-enabled) by cryptoplague covers the evolution of this technique, including how VBS (Virtualization-Based Security) changes the game.
+
+### Bypassing PatchGuard (KPP)
+
+PatchGuard is Microsoft's kernel integrity monitor. It periodically checks critical kernel structures and BSODs the system if it detects tampering. If you patch `g_CiOptions` and PatchGuard notices before you restore it — blue screen.
+
+The bypass works in 5 steps:
+
+1. **Disable PG timers** — Walk each processor's `KPRCB` timer table, decrypt the DPC pointers using `KiWaitNever`/`KiWaitAlways`, identify PatchGuard-owned timers, and null their DPC entries
+2. **Restore `KiBalanceSetManagerPeriodicDpc`** — PatchGuard hijacks this legitimate DPC; we restore the original deferred routine
+3. **Patch `KiSwInterruptDispatch`** — Replace the entry point with a `ret` instruction to prevent PG from triggering via software interrupts
+4. **Patch `KiMcaDeferredRecoveryService`** — Another PG trigger point, same `ret` patch
+5. **Clear `MaxDataSize`** — Zero out this value to prevent PG context allocation
+
+The DPC decryption is the most interesting part. PatchGuard encrypts its timer DPC pointers using a multi-step XOR/rotate scheme:
+
+```rust
+fn decrypt_dpc(&self, timer_addr: u64, encrypted_dpc: u64) -> u64 {
+    let rotated = encrypted_dpc ^ self.ki_wait_never;
+    let rotated = rotated.rotate_left((self.ki_wait_never & 0xFF) as u32);
+    let xored = rotated ^ timer_addr;
+    let swapped = xored.swap_bytes();
+    swapped ^ self.ki_wait_always
+}
+```
+
+I found the `KiWaitNever` and `KiWaitAlways` offsets by disassembling `ntoskrnl.exe` in IDA Pro and tracing the timer initialization code. These values are read from fixed offsets relative to the kernel base.
+
+## The 12 Spoofing Modules
+
+With kernel protections out of the way, the actual spoofing can begin. Each module targets a different hardware identifier that Windows (and anti-cheat / fingerprinting systems) uses to identify a machine.
+
+### SMBIOS — The Motherboard Identity
+
+SMBIOS (System Management BIOS) tables contain your motherboard serial, system UUID, chassis info, BIOS vendor, and more. Windows stores these in physical memory, referenced by a pointer in `ntoskrnl.exe`.
+
+I reversed `WmipFindSMBiosStructure` in IDA to find the physical address pointer and table length. The spoofer reads the raw SMBIOS data, parses each table type (BIOS, System, Baseboard, Chassis, Processor, Memory), and overwrites the string fields with generated values.
+
+The tricky part is that SMBIOS strings are stored as null-terminated sequences *after* the fixed-length header. You have to walk the string table carefully and write replacements that are exactly the same length as the originals — otherwise you corrupt the table structure.
+
+### Disk Serials — NVME, RAID, CLASSPNP
+
+Disk serial numbers are stored in driver-specific structures. The spoofer handles three different storage drivers:
+
+- **NVME** (`stornvme.sys`) — Serial stored in the NVMe identify controller data structure
+- **RAID** (`storport.sys` / RAID controllers) — Serial in the RAID unit extension
+- **CLASSPNP** (`classpnp.sys`) — The generic class driver that exposes serials to WMI queries
+
+Each required separate IDA sessions to trace how the serial gets from the physical device into the driver's internal structures.
+
+### NVIDIA GPU UUIDs
+
+This was one of the more complex modules. NVIDIA GPU UUIDs are stored in the `nvlddmkm.sys` driver's memory space. The UUID format follows NVIDIA's convention: `GPU-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`.
+
+The spoofer enumerates GPU devices, scans the driver's memory region for UUID patterns, and ranks candidates by confidence level (Exact, High, Medium, Low) based on surrounding memory context. You can also provide a known UUID from `nvidia-smi` output and the tool will locate it by signature scanning.
+
+### NIC MAC Addresses
+
+MAC address spoofing targets Intel WiFi adapters specifically (`Netwtw10.sys` and similar). The spoofer locates the adapter's internal structure in the driver and overwrites the MAC bytes. Generated MACs use real manufacturer OUI prefixes (Intel, Realtek, etc.) to look legitimate.
+
+### Monitor EDID via DXGKRNL
+
+EDID (Extended Display Identification Data) contains your monitor's serial number and manufacturer info. Windows caches this in two places: the registry and the `dxgkrnl.sys` kernel driver's memory.
+
+The spoofer patches both. The DXGKRNL approach required reversing how the display kernel caches EDID blocks — finding the adapter objects and their associated EDID buffers in memory.
+
+### The Rest
+
+The remaining modules follow similar patterns:
+
+- **Volume Serials** — Spoofs volume GUIDs stored in the mount manager
+- **USB Device IDs** — Modifies USB storage device serial numbers in driver memory
+- **TPM Identity** — Patches TPM endorsement key references in the registry
+- **EFI Variables** — Modifies EFI platform data stored in kernel memory
+- **Boot Configuration** — Spoofs boot timestamps and identifiers
+- **ARP Cache** — Manipulates the kernel's ARP table entries
+- **Registry Traces** — Cleans up hardware ID traces left in the Windows registry
+
+## Realistic HWID Generation
+
+Spoofing is useless if the generated values look fake. Anti-cheat systems check for patterns — a MAC address with an unregistered OUI prefix, a disk serial that doesn't match any manufacturer's format, or a SMBIOS UUID of all zeros will get flagged instantly.
+
+The spoofer includes a seed-based HWID generator that produces realistic values:
+
+- **MAC addresses** use real OUI prefixes from Intel, Realtek, Broadcom, and other manufacturers
+- **Disk serials** follow manufacturer-specific patterns (WD, Samsung, Seagate, NVMe)
+- **SMBIOS serials** match the format used by AMI, Phoenix, and other BIOS vendors
+- **UUIDs/GUIDs** follow RFC 4122 format with proper version bits
+
+The seed system means you can regenerate the same set of hardware IDs consistently. Change the seed, get a completely new identity. This is stored in `hwid_seed.json` and can be exported/imported.
+
+## Code Cave Injection
+
+For the PatchGuard barricade (an experimental MmAccessFault hook), the spoofer needs to inject code into kernel memory without allocating new pages — which would be suspicious. Instead, it finds "code caves": unused regions of padding bytes within legitimate kernel modules.
+
+```rust
+pub fn find_best_codecave(vmm: &Vmm, min_size: usize) -> Result<CodeCave> {
+    // Scan loaded kernel modules for regions of 0x00 or 0xCC bytes
+    // that are large enough to hold our shellcode
+}
+```
+
+This technique is well-known in exploit development — you're reusing space that's already mapped and executable, so no new memory allocations show up in kernel auditing.
+
+## Why Rust
+
+Most tools in this space are written in C or C++. I chose Rust mostly because I like writing Rust. Let's be honest — when you're writing raw bytes to kernel memory addresses through DMA, "memory safety" isn't really the selling point. The core operations are all FFI calls into `memprocfs` and most of the interesting code is `unsafe` by nature.
+
+That said, Rust still made the project more pleasant to work on:
+
+- **Error handling** — The `Result` type forces you to handle every failure path. When a DMA read fails or an offset is wrong, you get a clean error message instead of a silent corruption or segfault. Debugging kernel-level tools is painful enough without chasing undefined behavior in your own code.
+- **Tooling** — `cargo` just works. Building, dependency management, cross-compilation — it's all smoother than wrestling with CMake or Visual Studio project files.
+- **FFI** — Rust's `libloading` crate makes it straightforward to dynamically load `vmm.dll`, `leechcore.dll`, and `FTD3XX.dll` at runtime.
+
+The tradeoff is that Rust's ecosystem for Windows kernel internals is basically nonexistent. Most of the struct definitions, constants, and offsets had to be written from scratch based on IDA output. No crate is going to hand you `KPRCB` layouts or PatchGuard timer structures.
+
+## References and Prior Work
+
+This project builds on research and tools from the community:
+
+- [MemProcFS](https://github.com/ufrisk/MemProcFS) by ufrisk — The DMA engine that makes all of this possible
+- [PCILeech](https://github.com/ufrisk/pcileech) by ufrisk — The original DMA attack framework and FPGA firmware
+- ["The dusk of g_CiOptions"](https://blog.cryptoplague.net/main/research/windows-research/the-dusk-of-g_cioptions-circumventing-dse-with-vbs-enabled) — Deep dive into DSE bypass evolution
+- [Guided Hacking's HWID Spoofer RE](https://www.youtube.com/watch?v=ClqPkffPx5M) — Reverse engineering walkthrough of how spoofers work
+- [SecHex-Spoofy](https://github.com/SecHex/SecHex-Spoofy) — An earlier open-source (software-based) HWID spoofer
+
+## Disclaimer
+
+This project is for **educational and research purposes only**. It demonstrates the security implications of DMA devices and the level of access they provide when system protections are disabled.
+
+DMA attacks are a real threat vector. Understanding how they work is essential for building defenses — IOMMU enforcement, Secure Boot, VBS, and Credential Guard all exist to mitigate exactly this class of attack.
+
+The full source code is available at [github.com/vibheksoni/dma-spoofer](https://github.com/vibheksoni/dma-spoofer). PRs welcome — especially for supporting additional Windows builds.
