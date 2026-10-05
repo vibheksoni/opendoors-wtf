@@ -7,7 +7,7 @@ export const siteConfig = {
 	author: {
 		name: 'Vibhek Soni',
 		twitter: '@ImVibhek',
-		url: 'https://opendoors.wtf',
+		url: 'https://vibheksoni.com/',
 	},
 	socials: {
 		github: 'https://github.com/vibheksoni',
@@ -17,6 +17,13 @@ export const siteConfig = {
 		instagram: 'https://www.instagram.com/nyc.vibhek/',
 		buymeacoffee: 'https://buymeacoffee.com/vibheksoni',
 		devagency: 'https://devhivestudios.com/',
+		deepwiki: 'https://deepwiki.com/vibheksoni',
+		gravatar: 'https://gravatar.com/vibheksoni',
+	},
+	sites: {
+		portfolio: 'https://vibheksoni.com/',
+		freetheai: 'https://freetheai.org/',
+		secrets: 'https://secrets.wtf/',
 	},
 	defaults: {
 		ogImage: '/logo.png',

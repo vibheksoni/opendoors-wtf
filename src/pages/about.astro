@@ -18,12 +18,16 @@ import { buildBreadcrumbJsonLd, buildOrganizationJsonLd } from '../utils/jsonLd'
 					{ name: 'Home', url: Astro.site?.toString() ?? siteConfig.site },
 					{ name: 'About', url: new URL('/about/', Astro.site ?? siteConfig.site).toString() },
 				]),
-				buildOrganizationJsonLd(siteConfig.site, siteConfig.author.name, [
+				buildOrganizationJsonLd(siteConfig.author.url, siteConfig.author.name, [
 					siteConfig.socials.github,
+					siteConfig.socials.linkedin,
 					siteConfig.socials.x,
 					siteConfig.socials.youtube,
-					siteConfig.socials.linkedin,
 					siteConfig.socials.instagram,
+					siteConfig.socials.deepwiki,
+					siteConfig.socials.gravatar,
+					siteConfig.socials.buymeacoffee,
+					siteConfig.site,
 				]),
 			]}
 		/>

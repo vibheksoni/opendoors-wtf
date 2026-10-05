@@ -9,13 +9,13 @@ export function buildWebSiteJsonLd(siteUrl: string, name: string, description: s
 	};
 }
 
-export function buildOrganizationJsonLd(siteUrl: string, name: string, socials: string[]) {
+export function buildOrganizationJsonLd(personUrl: string, name: string, socials: string[]) {
 	return {
 		"@context": "https://schema.org",
 		"@type": "Person",
-		"@id": `${siteUrl}/#person`,
+		"@id": "https://vibheksoni.com/#vibhek-soni",
 		name,
-		url: siteUrl,
+		url: personUrl,
 		sameAs: socials,
 	};
 }
@@ -54,6 +54,7 @@ export function buildBlogPostingJsonLd(params: {
 		dateModified: params.dateModified ?? params.datePublished,
 		author: {
 			"@type": "Person",
+			"@id": "https://vibheksoni.com/#vibhek-soni",
 			name: params.authorName,
 			url: params.authorUrl,
 		},

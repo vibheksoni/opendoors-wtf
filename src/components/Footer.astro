@@ -16,9 +16,13 @@ const today = new Date();
 		<div class="coffee-cta">
 			<p>Like my work? <a href={siteConfig.socials.buymeacoffee} target="_blank">Buy me a coffee ☕</a></p>
 			<p class="agency-cta">Need a project done? <a href={siteConfig.socials.devagency} target="_blank">Work with me at DevHive Studios 🐝</a></p>
+			<p class="sites">
+				Written by <a href={siteConfig.sites.portfolio} rel="author me">Vibhek Soni</a>.
+				Also <a href={siteConfig.sites.freetheai}>FreeTheAI</a> and <a href={siteConfig.sites.secrets}>secrets.wtf</a>.
+			</p>
 		</div>
 		<div class="social-links">
-			<a href={siteConfig.socials.x} target="_blank" rel="noreferrer" aria-label="X (Twitter)">
+			<a href={siteConfig.socials.x} target="_blank" rel="me noreferrer" aria-label="X (Twitter)">
 				<svg viewBox="0 0 24 24" aria-hidden="true" width="24" height="24">
 					<path
 						fill="currentColor"
@@ -26,7 +30,7 @@ const today = new Date();
 					></path>
 				</svg>
 			</a>
-			<a href={siteConfig.socials.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn">
+			<a href={siteConfig.socials.linkedin} target="_blank" rel="me noreferrer" aria-label="LinkedIn">
 				<svg viewBox="0 0 24 24" aria-hidden="true" width="24" height="24">
 					<path
 						fill="currentColor"
@@ -34,7 +38,7 @@ const today = new Date();
 					></path>
 				</svg>
 			</a>
-			<a href={siteConfig.socials.instagram} target="_blank" rel="noreferrer" aria-label="Instagram">
+			<a href={siteConfig.socials.instagram} target="_blank" rel="me noreferrer" aria-label="Instagram">
 				<svg viewBox="0 0 24 24" aria-hidden="true" width="24" height="24">
 					<path
 						fill="currentColor"
@@ -42,7 +46,7 @@ const today = new Date();
 					></path>
 				</svg>
 			</a>
-			<a href={siteConfig.socials.github} target="_blank" rel="noreferrer" aria-label="GitHub">
+			<a href={siteConfig.socials.github} target="_blank" rel="me noreferrer" aria-label="GitHub">
 				<svg viewBox="0 0 24 24" aria-hidden="true" width="24" height="24">
 					<path
 						fill="currentColor"
@@ -50,7 +54,7 @@ const today = new Date();
 					></path>
 				</svg>
 			</a>
-			<a href={siteConfig.socials.youtube} target="_blank" rel="noreferrer" aria-label="YouTube">
+			<a href={siteConfig.socials.youtube} target="_blank" rel="me noreferrer" aria-label="YouTube">
 				<svg viewBox="0 0 24 24" aria-hidden="true" width="24" height="24">
 					<path
 						fill="currentColor"
@@ -58,7 +62,7 @@ const today = new Date();
 					></path>
 				</svg>
 			</a>
-			<a href={siteConfig.socials.buymeacoffee} target="_blank" rel="noreferrer" aria-label="Buy Me A Coffee">
+			<a href={siteConfig.socials.buymeacoffee} target="_blank" rel="me noreferrer" aria-label="Buy Me A Coffee">
 				<svg viewBox="0 0 24 24" aria-hidden="true" width="24" height="24">
 					<path
 						fill="currentColor"
@@ -182,6 +186,12 @@ const today = new Date();
 
 	.coffee-cta a:hover {
 		color: #fff;
+	}
+
+	.sites {
+		margin-top: 0.75em;
+		font-size: 0.9em;
+		opacity: 0.9;
 	}
 
 	.agency-cta {
