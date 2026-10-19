@@ -94,6 +94,8 @@ export function buildBlogPostingJsonLd(params: {
 	keywords?: string[];
 	wordCount?: number;
 	markdownUrl?: string;
+	lang?: string;
+	originalUrl?: string;
 }) {
 	return {
 		"@context": "https://schema.org",
@@ -104,7 +106,8 @@ export function buildBlogPostingJsonLd(params: {
 		url: params.url,
 		datePublished: params.datePublished,
 		dateModified: params.dateModified ?? params.datePublished,
-		inLanguage: siteConfig.language,
+		inLanguage: params.lang ?? siteConfig.language,
+		translationOfWork: params.originalUrl ? { "@id": `${params.originalUrl}#article` } : undefined,
 		author: {
 			"@type": "Person",
 			"@id": siteConfig.author.id,

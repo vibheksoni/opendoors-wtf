@@ -1,0 +1,62 @@
+---
+title: "Los riesgos ocultos de los servidores de LM Studio expuestos"
+description: "Investigo cómo la función de servidor local de LM Studio puede exponer tus modelos de IA a internet público, y cómo asegurarla."
+pubDate: 2025-01-23
+tags:
+  - api security
+  - lmstudio
+  - network security
+lang: es
+source: lmstudio-api-security
+---
+
+import { Image } from 'astro:assets';
+import step1Img from '../../../assets/lmstudio/Step1.png';
+import step2Img from '../../../assets/lmstudio/Step2.png';
+
+## El problema
+
+LM Studio es una potente aplicación con interfaz gráfica que hace que ejecutar LLMs locales sea accesible para todos. Incluye una función muy cómoda: un **servidor local** que ofrece una API compatible con OpenAI en el puerto **1234**.
+
+Este servidor te permite usar tus modelos locales con otras aplicaciones o compartirlos en tu red local. Sin embargo, como muchas herramientas para desarrolladores, prioriza la facilidad de uso sobre la seguridad por defecto. Cuando activas el servidor, sobre todo si habilitas "Serve on Local Network" sin un firewall adecuado, podrías estar abriendo una puerta a todo internet.
+
+## Qué puede salir mal
+
+El servidor de LM Studio no exige autenticación por defecto. Si tu máquina está conectada directamente a internet o tu router redirige el puerto 1234, un atacante puede:
+
+- **Consultar tus modelos:** Usar tus recursos de cómputo para generar texto o código.
+- **Disparar tu factura de luz:** La inferencia continua en tu GPU consume mucha energía.
+- **Acceder al contexto cargado:** Si el modelo tiene contexto de sesiones anteriores (según la implementación), datos sensibles podrían quedar expuestos en teoría.
+
+## Cómo encontré esto
+
+Quería ver si la filosofía de diseño de "facilidad de uso" había provocado exposiciones accidentales parecidas a las que vemos con otras herramientas de desarrollo. LM Studio tiene un interruptor específico en su interfaz para activar el servidor.
+
+Recurrí a **FOFA**, un motor de búsqueda del ciberespacio, para buscar instancias expuestas.
+
+Busqué máquinas que exponen el puerto 1234 con una firma específica de la respuesta del servidor de LM Studio. La consulta que usé fue: `port="1234" && body="LM Studio"`.
+
+<Image src={step1Img} alt="Consulta de búsqueda en FOFA.info mostrando la búsqueda del puerto 1234 para LM Studio" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+Los resultados confirmaron mis sospechas. Encontré **más de 3,000 hosts expuestos**:
+
+<Image src={step2Img} alt="Resultados de búsqueda en FOFA.info mostrando más de 3,000 instancias de LM Studio expuestas" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+Estos no son servidores vacíos; son endpoints de API totalmente funcionales esperando prompts.
+
+## Cómo proteger tu instancia de LM Studio
+
+Si usas la función de servidor de LM Studio, sigue estos pasos para mantenerte seguro:
+
+### 1. Enlaza solo a localhost
+A menos que necesites acceder a LM Studio desde otro dispositivo, asegúrate de que el servidor escuche en `127.0.0.1` (localhost) y no en `0.0.0.0` (todas las interfaces). En la interfaz de LM Studio, revisa la configuración del servidor.
+
+### 2. Usa un firewall
+Si tienes que activar "Serve on Local Network", configura el firewall de tu sistema operativo (Windows Defender o el firewall de macOS) o tu router para bloquear el tráfico entrante al puerto 1234 desde internet público. Permite conexiones solo desde direcciones IP locales de confianza.
+
+### 3. Desactiva el servidor cuando no lo uses
+La defensa más simple es apagarlo. Inicia el Local Server solo cuando lo estés usando activamente para desarrollo o pruebas.
+
+## Conclusión
+
+Herramientas como LM Studio están democratizando la IA, pero también traen responsabilidades de seguridad propias de la nube al escritorio. Una sola casilla en una interfaz gráfica puede exponer tu hardware al mundo. Verifica siempre tu exposición de red cuando actives funciones de servidor en herramientas locales.

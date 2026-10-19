@@ -1,0 +1,25 @@
+---
+import { render, type CollectionEntry } from 'astro:content';
+import BlogPost from '../../../layouts/BlogPost.astro';
+import { siteConfig } from '../../../config/site';
+import { getTranslations } from '../../../utils/translations';
+import { alternatesFor } from '../../../utils/translations';
+
+export async function getStaticPaths() {
+	const translations = await getTranslations();
+	return translations.map((entry) => ({
+		params: { lang: entry.data.lang, slug: entry.data.source },
+		props: { entry },
+	}));
+}
+
+const { entry } = Astro.props as { entry: CollectionEntry<'translations'> };
+const { Content } = await render(entry);
+const alternates = await alternatesFor(entry.data.source);
+const originalUrl = `${siteConfig.site}/blog/${entry.data.source}/`;
+const { lang, source, ...data } = entry.data;
+---
+
+<BlogPost {...data} lang={lang} alternates={alternates} originalUrl={originalUrl}>
+	<Content />
+</BlogPost>

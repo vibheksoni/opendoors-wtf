@@ -2,6 +2,7 @@
 import { getCollection } from 'astro:content';
 import { siteConfig } from '../config/site';
 import { sortPosts } from '../utils/posts';
+import { LANGUAGES, TRANSLATED_LANGS } from '../i18n';
 
 const today = new Date();
 const recent = sortPosts(await getCollection('blog')).slice(0, 4);
@@ -68,6 +69,11 @@ const withBase = (path: string) => {
 
 		<div class="footer-bottom">
 			<p class="copyright">&copy; {today.getFullYear()} {siteConfig.author.name}. New York.</p>
+			<nav class="langs" aria-label="Translations">
+				{TRANSLATED_LANGS.map((code) => (
+					<a href={withBase(`/${code}/blog/`)} hreflang={code} lang={code}>{LANGUAGES[code].name}</a>
+				))}
+			</nav>
 		<div class="social-links">
 			<a href={siteConfig.socials.x} target="_blank" rel="me noreferrer" aria-label="X (Twitter)">
 				<svg viewBox="0 0 24 24" aria-hidden="true" width="24" height="24">
@@ -297,6 +303,23 @@ const withBase = (path: string) => {
 		align-items: center;
 		gap: 1rem;
 		flex-wrap: wrap;
+	}
+
+	.langs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 0.9rem;
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+	}
+
+	.langs a {
+		color: #71717a;
+		text-decoration: none;
+	}
+
+	.langs a:hover {
+		color: var(--accent);
 	}
 
 	.copyright {

@@ -1,0 +1,212 @@
+---
+title: "unbunedでBun実行ファイルを分解する"
+description: "Bunがアプリを1つの実行ファイルにまとめる仕組みと、unbunedがバンドルを見つけ、Bunのモジュールグラフを読み、ソースマップから元のTypeScriptを復元する方法を解説します。"
+pubDate: 2026-10-18
+tags:
+  - reverse engineering
+  - bun
+  - javascript
+  - binary formats
+  - python
+lang: ja
+source: unbuned-bun-executables
+---
+import { Image } from 'astro:assets';
+import droidModules from '../../../assets/unbuned/droid-modules.png';
+
+## なぜ作ったのか
+
+リバースエンジニアリングが好きで、アプリが中でどう動いているのかを見るのが好きです。最近、自分が使っているツールの多くがBunでコンパイルされたアプリとして配布されるようになりました。コーディングエージェントもCLIもデスクトップアプリも、今はどれも1つの大きなexeで届きます。普通のNodeアプリのようにフォルダを開いてJavaScriptを読む、ということはできません。
+
+そこで [unbuned](https://github.com/vibheksoni/unbuned) を作りました。exeを渡すと、本物のファイル名のまま実際のファイルに分割されたコードが返ってきます。アプリがソースマップ付きでビルドされていれば、元のTypeScriptまで取り戻せます。依存関係のない、Pythonファイル1つだけのツールです。
+
+この記事では、Bun実行ファイルの中身が実際にどうなっているのか、そしてunbunedがそれをどう分解するのかを順に説明します。ここに出てくる数字はすべて実際のバイナリと1つのコマンドから得たものなので、自分で全部確認できます。
+
+## Bun実行ファイルとは
+
+`bun build --compile` を実行すると、Bunは自分のランタイムに、バンドルしたアプリをくっつけます。ランタイムはどのアプリでも同じです。あなたのコードはバイナリの中の専用セクションに入ります。
+
+| プラットフォーム | アプリの置かれる場所 |
+|---|---|
+| Windows PE | `.bun` という名前のセクション |
+| Linux ELF | `.bun` という名前のセクション |
+| macOS Mach-O | `__BUN,__bun` のセグメントとセクション(thinバイナリでもuniversalバイナリでも) |
+
+このセクションが対象のすべてです。ファイルの残りはBun自身で、今回の目的には関係ありません。最初の仕事はこのセクションを見つけることです。
+
+## ステップ1: セクションを見つける
+
+Windowsの場合は、PEのセクションテーブルをたどります。テーブルはオプショナルヘッダの直後から始まり、各エントリは40バイトで、先頭の8バイトが名前です。
+
+```python
+num_sections = struct.unpack('<H', data[pe_offset+6:pe_offset+8])[0]
+optional_header_size = struct.unpack('<H', data[pe_offset+20:pe_offset+22])[0]
+section_table_offset = pe_offset + 24 + optional_header_size
+
+for i in range(num_sections):
+    section_offset = section_table_offset + (i * 40)
+    section_name = data[section_offset:section_offset+8].rstrip(b'\x00').decode('ascii', errors='ignore')
+    if section_name == '.bun':
+        ...
+```
+
+ELFとMach-Oも、それぞれのヘッダで同じように処理します。universalのMach-Oでは、先に適切なアーキテクチャのスライスを選びます。それでも見つからない場合は、Bunのマジックバイトを検索する方法にフォールバックするので、セクションのメタデータが壊れたバイナリでも読めます。
+
+ファイルはRAMに読み込まず、メモリマップで扱います。バイナリには300 MBに近いものもあり、全部読み込む理由はありません。
+
+## ステップ2: Bunは末尾に地図を残している
+
+実際のファイル名を取り戻せたのは、この部分のおかげです。Bunはコードを連結するだけではありません。セクションを書き出す前に、埋め込んだすべてのファイルの表を作り、それを `StandaloneModuleGraph` と呼んで、一番最後に置いています。
+
+セクションの最後の16バイトは、文字列そのままのマーカーです。
+
+```text
+\n---- Bun! ----\n
+```
+
+そのマーカーの直前の32バイトが `Offsets` 構造体です。データサイズ、ファイルテーブルへのポインタ、エントリポイントのid、フラグ群が入っています。
+
+```text
+...file records...
+Offsets   { byte_count, modules_ptr, entry_point_id, compile_exec_argv_ptr, flags }
+TRAILER   "\n---- Bun! ----\n"
+```
+
+つまり、末尾からトレーラーを探し、32バイト戻れば、ファイルテーブルの場所が分かります。各ファイルには52バイトのレコードがあります。
+
+```text
+name                  { u32 offset, u32 length }
+contents              { u32 offset, u32 length }
+sourcemap             { u32 offset, u32 length }
+bytecode              { u32 offset, u32 length }
+module_info           { u32 offset, u32 length }
+bytecode_origin_path  { u32 offset, u32 length }
+encoding              u8     0 binary, 1 latin1, 2 utf16
+loader                u8     0 js, 1 jsx, 2 ts, 3 tsx, 4 json, 5 file, ...
+module_format         u8     0 none, 1 esm, 2 cjs
+side                  u8     0 server, 1 client
+```
+
+見た目以上に重要な点が1つあります。これらのオフセットはすべて、セクションの先頭に、セクション自身の8バイトの長さヘッダを**足した**位置が基準です。この `+8` を忘れると、すべてのポインタが8バイト手前を指し、テーブル全体がゴミとして読まれます。パーサーもここを検証していて、`byte_count + 8` がちょうどヘッダに着かない場合は、中途半端に読まずにテーブルを拒否します。
+
+レコードはロード順に書かれ、エントリポイントが先頭です。そのため、モジュールの `contents` のオフセットは、そのテキストがバンドル内で始まる位置とぴったり一致し、モジュールの命名は推測ではなく参照で済みます。FactoryのDroid CLIは275 MBのバイナリで、unbunedを走らせるとこうなります。
+
+```text
+modules named from module graph: 623 of 623
+Module graph: 706 embedded files
+Entry point: B:/~BUN/root/droid
+Graph loaders: 623 jsx, 43 binary, 40 file
+```
+
+<Image src={droidModules} alt="unbunedが書き出したdroidのモジュールフォルダを表示するWindowsエクスプローラー。0000-chunk-m0vzr57a.jsから0030-chunk-s3q890qc.js、および0008-droid.jsといったファイルが並んでいる" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+グラフからは、Bunがすでに捨ててしまった名前は取り出せません。Bunがテーブルを書く時点で、チャンクはすでに `chunk-9fxe9jf7.js` のようなハッシュ名になっているので、得られるのはその名前です。unbunedはコンパイラが記録した内容をそのまま報告するだけで、それ以上を知っているふりはしません。
+
+## ステップ3: JavaScriptはどこで終わるのか
+
+バンドル本体は、コンパイル済みモジュールの並びです。各モジュールは `// @bun` というヘッダ行で始まり、モジュール同士はNULバイトで区切られています。開始位置を見つけるのは簡単です。難しかったのは、終わりの位置を見つけることでした。
+
+最後のモジュールの直後にはBunのメタデータが来ますが、これはきれいなバイナリではありません。Bunは表示可能なバイトをそこに混ぜているので、コードの後ろの領域は非テキストが約60%になります。通常のソースは10%未満です。さらに、モジュールの中に本物のNULバイトを含むものもあるため、最初のNULで止めるわけにもいきません。
+
+うまくいったのは、テキストと分かっている最後のモジュールヘッダから**前方へ**スキャンし、非テキストバイトの密度が跳ね上がるところで止める方法でした。粗いパスのあとに細かいパスを行い、スキャン窓の端ではなく正確なバイトに着地します。あわせて、`//# sourceMappingURL=` や `//# debugId=` のように、Bunがコード末尾に残すマーカーも探します。
+
+バイトのチェックは `bytes.translate` で行うので、150 MBのセクションのスキャンも、Pythonのループではなく、CPythonのCコードの中で済みます。
+
+ここを正確にすることは重要でした。以前のバージョンは窓の端で止まってしまい、Amp CLIでは最後の `export default b3n();` が途中で切れていました。今ではそのバンドルはソースの終わりでちゃんと終わり、`node --check` でパースも通ります。
+
+### UTF-16という驚き
+
+Amp CLIからは、すべてのBunバンドルがプレーンなバイト列とは限らないことも学びました。JavaScript領域全体がUTF-16で、ASCII文字のたびにパディングのNULが続きます。`// @bun` をバイトで検索しても何も見つからず、テキスト率の計算はどれも半分がバイナリという結果になります。
+
+そこでunbunedは、まずマーカーをプレーンなバイト列として探し、次に両方のバイトオーダーのUTF-16として探します。見つかったエンコーディングは、以降のすべてのステップに引き継ぎます。オフセットは元のバイト位置のままなので、マニフェストはディスク上のファイルの状態をそのまま表します。テキストがUTF-8に変換されるのは、書き出すときだけです。
+
+## ステップ4: 元のTypeScriptを取り戻す
+
+アプリがソースマップ付きでビルドされていれば、Bunは各モジュールが指すソースマップレコードの中に、すべてのファイルの元のテキストを保持しています。バンドル自体はすでにチャンクに平坦化されているので、元のTypeScriptが残っているのはそこだけです。
+
+ただし、期待するようなJSONのソースマップではありません。BunはそのJSONをコンパイル中に一度読み、代わりにコンパクトなテーブルを書き出します。
+
+| オフセット | 内容 |
+|---|---|
+| `0` | `u32` ソース数 |
+| `4` | `u32` 生のVLQマッピングの長さ |
+| `8` | ソースパスごとの `{offset, length}` ポインタ |
+| 次 | ソーステキストごとの `{offset, length}` ポインタ |
+| 次 | VLQマッピングのブロブ |
+| 次 | すべてのパス、続いてZstandardで圧縮されたすべてのソーステキスト |
+
+パスは、それをimportしたファイルからの相対パスなので、共有された依存関係は `../../node_modules/...` のように現れます。先頭の `..` を取り除くと、すべてのファイルが本来の場所に戻ります。
+
+```text
+src/index.ts
+src/exec/acpDaemonRunner.ts
+packages/logging/src/tracing/enums.ts
+node_modules/@opentelemetry/api/build/src/version.js
+```
+
+Droidでは、元のファイルが4,914個、ソースは42.6 MBになります。内訳は、依存関係のファイルが2,487個、アプリ自身の `src` のファイルが1,281個、ワークスペースパッケージのファイルが1,146個です。
+
+Freebuffは、これがなぜ重要かを示してくれます。Freebuffは、`zUA` や `xH` のような名前が7.4 MB分並ぶ、分割しようのない最小化済みモジュール1つで配布されています。それでもソースマップには実際のプロジェクトが入っていて、unbunedは1,241個の元ファイルと13.5 MBのTypeScriptとJavaScriptを、本物の `src/`、`common/`、`packages/`、`sdk/` フォルダの構成で取り出せました。
+
+## 中にあるそのほかのもの
+
+### バイトコード
+
+アプリが `--bytecode` 付きでビルドされている場合、抽出できるJavaScriptはフォールバックにすぎません。実際に動くのはJavaScriptCoreのバイトコードです。unbunedはその場合を教えてくれて、モジュールグラフのポインタを使って、モジュールごとに1つのバイトコードブロブを書き出せます。どのブロブも同じヘッダで始まり、そのヘッダの長さは、私が試したすべてのモジュールでグラフの長さと一致しました。抽出が正しいことの良い確認になっています。
+
+バイトコードをJavaScriptに戻すことはしません。JSCのバイトコードは文書化されておらず、リリースごとに変わるので、それはコンパイラのバックエンドを丸ごと作る話になり、週末にできる機能ではありません。
+
+### 埋め込みファイル
+
+BunアプリはJavaScriptだけではありません。ほかのファイルも同じセクションに格納されていて、その多くはZstandardフレームとして圧縮されています。Droidには80個あり、合計で約88 MBになります。`rg.exe`、`keytar`、4つのプラットフォーム向けの `rust_pty` ライブラリ、エージェントが読む `SKILL.md` ファイルなどが含まれます。モジュールグラフは80個すべてに名前を付けているので、本物の名前のまま取り出せます。Zstandardは唯一のオプションの部品です。なくてもファイルは取り出せますが、圧縮されたままになります。
+
+## 読めるようにする
+
+Bunは最小化されたコードを出力しますが、最小化されたコードはモジュールごとに巨大な1行になります。Prettierなどのフォーマッタは、完全な構文木を作るNodeパッケージなので、Python製の単一ファイルツールには合いませんし、40 MBのバンドルでは遅くなります。
+
+そこでunbunedは独自のフォーマッタを持っています。1パスのレキサーで、文字列、テンプレートリテラル、コメント、正規表現リテラル、演算子、括弧のような、レイアウトを変えるものだけを探し、その間にあるものはそのままコピーします。
+
+守るべき絶対のルールが1つあります。**空白の追加と削除しかしません。** トークンの書き換えも並べ替えもしないので、次の式は常に成り立ちます。
+
+```python
+assert "".join(extracted.split()) == "".join(formatted.split())
+```
+
+フォーマッタのテストでは、Node側の落とし穴も見つかりました。`node --check module.js` が実際にファイルをパースするのは、中に `import` も `export` もないときだけです。Bunのバンドルには必ずそれらがあるので、ファイルパスを渡してチェックすると、何もパースせずに通ってしまいます。標準入力に流し込む必要があります。
+
+```bash
+node --check --input-type=module < module.js
+```
+
+## 動くことの証明
+
+本当のテストは、バージョン3.0.68のClineのCLIでした。212個の別々のモジュールがあり、ほかのどの対象よりも抽出器を壊しました。1つのモジュールは、どのヘッダパターンからも見えないシバンの陰に隠れていました。そしてフォーマッタは、埋め込まれたtree-sitterクエリファイルの中のURLに、こっそりスペースを足していました。どちらも、このバイナリ1つのおかげで直りました。
+
+それらの修正の後、組み立て直したモジュールは、元のバンドルとバイト単位で一致します。
+
+```text
+modules: 212
+js length: 18386663
+rebuilt length: 18386663
+identical: True
+```
+
+その後、モジュールツリーを13個のアセットと一緒にディスクへ書き戻し、実行しました。抽出したCLIは `--version` に対して、本物のバイナリと同じ `3.0.68` を返します。`--version`、`--help`、そしてすべてのサブコマンドの `--help` など、読み取り専用のコマンドを19個試して、どれも元のものとバイト単位で同一の出力と同じ終了コードを返しました。出力がJavaScriptっぽく見えるかどうかよりも、はるかに良い確認方法です。
+
+## 試してみる
+
+```bash
+git clone https://github.com/vibheksoni/unbuned.git
+cd unbuned
+python unbuned.py app.exe            # the merged JavaScript
+python unbuned.py app.exe --inspect  # what is inside, without writing anything
+python unbuned.py app.exe --all      # modules, original sources, assets and bytecode
+```
+
+Droidに `--all` を使うと、約4.5秒で6,000個以上のファイルが書き出されます。
+
+動くところを自分がよく知っているもので見たいなら、`bun build --compile --sourcemap` で小さなアプリをビルドして、unbunedを走らせてみてください。自分のファイルが本物の名前のまま戻ってくるはずです。
+
+見ることを許可されているバイナリに対して使ってください。リバースエンジニアリング、セキュリティ研究、マルウェア解析、そしてプロジェクトは消えたのにexeだけが残っているときに自分のコードを取り戻すために作られています。
+
+コードは [GitHub](https://github.com/vibheksoni/unbuned) にあります。手元のBunバイナリで何かが壊れたら、issueを立ててください。このツールの修正のほとんどは、実際のバイナリに壊されたことから生まれたものです。

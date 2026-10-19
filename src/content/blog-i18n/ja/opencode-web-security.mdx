@@ -1,0 +1,67 @@
+---
+title: "OpenCode Web: 優れたツールだが、デフォルト設定は危険"
+description: "OpenCode は Claude Code に代わる強力なマルチ LLM 対応ツールです。しかし、設定を誤るとそのウェブインターフェースは深刻なセキュリティ上の悪夢になりかねません。安全に使うための方法を解説します。"
+pubDate: 2025-01-23
+tags:
+  - api security
+  - web security
+  - ai security
+  - network security
+  - broken access control
+  - rce
+  - devsecops
+  - software engineering
+lang: ja
+source: opencode-web-security
+---
+
+import { Image } from 'astro:assets';
+import step1Img from '../../../assets/opencode-web/Steps1.png';
+import step2Img from '../../../assets/opencode-web/Steps2.png';
+
+## より優れた代替ツールなのか?
+
+最近 **OpenCode** を使っているのですが、正直なところ、多くの点で Claude Code より優れた代替ツールだと感じています。複数の LLM プロバイダー (Ollama、OpenAI、Anthropic など) に対応していて、オープンソースで、動作も速く感じます。モデルをその場で切り替えられる柔軟さは、ローカルでの開発において大きな武器になります。
+
+ただし、この分野の多くの開発者向けツールと同じように、OpenCode にも CLI をブラウザベースのアプリケーションに変える「Web UI」モード (`opencode web`) があります。使い勝手の面では便利ですが、注意しないと非常に大きなセキュリティホールになります。
+
+## リスク
+
+`opencode web` を実行すると、サーバーが起動します。ネットワーク上の別のデバイスからアクセスするためにこれを `0.0.0.0` (すべてのインターフェース) にバインドすると、**リモートコード実行 (RCE)** の脆弱性をインターネット全体に晒してしまう可能性があります。
+
+以前書いた Claude Code の Web UI と同じように、OpenCode のウェブインターフェースでは、コマンドの実行、ファイルの編集、シェルの操作ができます。認証がなければ、あなたの IP アドレスを見つけた人は誰でも、あなたのマシンの管理者になれてしまいます。
+
+## 公開状況 (FOFA 検索)
+
+実際にこうした状況が起きているのか、**FOFA** で簡単に調べてみました。
+検索クエリ: `title="OpenCode"`
+
+<Image src={step1Img} alt="OpenCode のインスタンスを探す FOFA.info の検索クエリ" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+すぐに **32 台の公開ホスト** が見つかりました。
+
+<Image src={step2Img} alt="公開されている 32 件の OpenCode ウェブインスタンスを示す FOFA の検索結果" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+32 台というと少なく聞こえるかもしれませんが、これはニッチな開発者向けツールだということを忘れてはいけません。つまり、32 人の開発者が、うっかり開発環境の全体を公開ウェブに晒してしまっている可能性が高いということです。OpenCode はカスタマイズ可能なので、改変版を動かしているユーザーも多く、そうしたものは単純なタイトル検索には引っかかりません。実際の数はもっと多いと考えられます。
+
+## 安全に使うには
+
+OpenCode の開発者は、実際にセキュリティの仕組みを用意してくれています。ただし、それを自分で有効にする必要があります。
+
+### 1. パスワードを設定する
+パスワードを設定すれば、Web UI をロックできます。この簡単な手順だけで、不正アクセスを防げます。
+
+ウェブサーバーを起動する前に、次のコマンドを実行します:
+```bash
+opencode --set-password <your-strong-password>
+```
+*別の方法として、環境変数 `OPENCODE_SERVER_PASSWORD` を設定することもできます。*
+
+### 2. インターネットに公開しない
+明確な理由があり、VPN やトンネルを使っている場合を除いて、OpenCode のポートを公開インターネットに転送しないでください。`localhost` (`127.0.0.1`) か、信頼できるローカルネットワーク (`LAN`) の内側だけで使いましょう。
+
+## まとめ
+
+OpenCode は素晴らしいツールで、マルチモデル対応と速さの点で強くおすすめします。ただし、安全装置を外してしまえば、「強力」は「危険」と同じ意味になります。
+
+コーディングアシスタントを攻撃者の侵入口にしてはいけません。パスワードを設定しましょう。

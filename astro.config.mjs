@@ -1,6 +1,6 @@
 // @ts-check
 
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import { defineConfig } from 'astro/config';
@@ -27,6 +27,13 @@ function readPostDates() {
 		}
 		if (value) dates.set(`${SITE}/blog/${file.replace(/\.mdx?$/, '')}/`, new Date(value));
 	}
+	const i18nDir = new URL('./src/content/blog-i18n/', import.meta.url);
+	for (const lang of existsSync(i18nDir) ? readdirSync(i18nDir) : []) {
+		for (const file of readdirSync(new URL(`${lang}/`, i18nDir))) {
+			const source = dates.get(`${SITE}/blog/${file.replace(/\.mdx?$/, '')}/`);
+			if (source) dates.set(`${SITE}/${lang}/blog/${file.replace(/\.mdx?$/, '')}/`, source);
+		}
+	}
 	return dates;
 }
 
@@ -35,6 +42,7 @@ const newest = new Date(Math.max(...Array.from(postDates.values(), (date) => dat
 
 export default defineConfig({
 	site: SITE,
+	redirects: Object.fromEntries(['es', 'pt', 'de', 'fr', 'ja'].map((lang) => [`/${lang}`, `/${lang}/blog/`])),
 	integrations: [
 		mdx(),
 		sitemap({

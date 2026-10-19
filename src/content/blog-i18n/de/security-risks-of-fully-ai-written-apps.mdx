@@ -1,0 +1,64 @@
+---
+title: "Die gefährliche Illusion vom 'Solo-KI-Entwickler'"
+description: "Warum es zu verwundbarer Software führt, KI als Ersatz für technische Aufsicht zu behandeln, und wie man richtig mit KI als Co-Entwickler arbeitet."
+pubDate: 2025-01-23
+tags:
+  - ai security
+  - devsecops
+  - software engineering
+  - opinion
+lang: de
+source: security-risks-of-fully-ai-written-apps
+---
+
+## Die Falle von „Es funktioniert einfach"
+
+Wir leben in einem goldenen Zeitalter der generativen KI. Tools wie Claude Code, Cursor und GitHub Copilot erlauben es uns, Features schneller auszuliefern als je zuvor. Aber ich beobachte einen wachsenden Trend in Open-Source-Projekten und sogar in Enterprise-Codebasen: **Der abwesende Entwickler.**
+
+Das passiert, wenn ein Mensch die KI nicht als Werkzeug behandelt, sondern als Auftragnehmer, dem er blind vertrauen kann. Er promptet, kopiert, deployt. Wenn es kompiliert, wird es ausgeliefert.
+
+Diese Denkweise ist gefährlich. Wie ich beim Auditieren mehrerer „vollständig KI-generierter" Web-UIs festgestellt habe, führt dieser Ansatz zu Sicherheitslücken, so groß, dass man einen Lkw hindurchfahren könnte: Authentifizierung auf der Client-Seite, nicht validierte Dateipfade und uneingeschränkter Shell-Zugriff.
+
+## KI ist ein Junior-Entwickler auf Speed
+
+Stell dir vor, du stellst einen Junior-Entwickler ein, der:
+1. 1000 Wörter pro Minute tippt.
+2. Jede existierende Bibliothek kennt.
+3. Null Verständnis für Sicherheitsfolgen hat, solange man es ihm nicht ausdrücklich sagt.
+4. Dich selbstbewusst anlügt, wenn er die Antwort nicht kennt.
+
+Würdest du diesen Entwickler ohne Code-Review in Produktion pushen lassen? **Nein.**
+
+Genau das passiert aber, wenn wir die KI ein Projekt „solo" durchziehen lassen. Die KI optimiert darauf, **den unmittelbaren Prompt zu lösen**. Sie optimiert nicht von Natur aus auf die „unbekannten Unbekannten", etwa darauf, was passiert, wenn ein Nutzer eine Anfrage abfängt oder wenn ein Pfadparameter `../../` enthält.
+
+## Die „Wiederholungsschleife" des Verderbens
+
+Eine der häufigsten Fehlerarten ist die „Kontextschleife". Du bittest die KI, einen Bug zu beheben. Sie liefert dir Code. Der Code schlägt fehl. Du fügst den Fehler wieder ein. Sie liefert dir eine „reparierte" Version.
+
+Nach fünf Iterationen hast du vielleicht funktionierenden Code, aber auch ein Frankenstein-Monster aus Patches. Die KI hat den Faden der Gesamtarchitektur verloren. Sie wirft nur noch Spaghetti an die Wand, um deine Fehlermeldung zufriedenzustellen.
+
+**Hier entstehen Schwachstellen.** In der Hektik, alles „grün zu bekommen", werden Sicherheitsprüfungen umgangen, Eingabevalidierung fällt weg und hartcodierte Secrets schleichen sich ein.
+
+## Wie man KI tatsächlich nutzt (die „Co-Entwickler"-Denkweise)
+
+Um mit KI sichere Software zu bauen, musst du dein mentales Modell ändern. Du bist nicht der „Prompter", du bist der **Lead Engineer**. Die KI ist dein Pair-Programming-Partner.
+
+### 1. Akzeptiere keine Magie
+Wenn die KI einen Codeblock schreibt, den du nicht verstehst, **halte an**. Lass dir den Code erklären. Wenn du nicht überprüfen kannst, dass er sicher ist, geh davon aus, dass er es nicht ist.
+
+### 2. Hinterfrage die Ausgabe
+Sprich mit der KI wie mit einem Kollegen.
+- *„Hey, du hast bei diesem Refactoring das CSRF-Token entfernt. Warum?"*
+- *„Dieser Input-Handler sieht anfällig für XSS aus. Schreib ihn mit Sanitization neu."*
+- *„Du verwendest hier `dangerouslySetInnerHTML`. Gibt es einen sichereren Weg?"*
+
+### 3. Prüfe die Diffs, nicht nur das Ergebnis
+Schau nicht nur auf die fertige Datei. Schau dir den *Diff* an. Hat die KI heimlich einen `TODO`-Kommentar gelöscht? Hat sie eine Berechtigungsprüfung entfernt? KI-Modelle haben ein begrenztes Kontextfenster; sie „vergessen" oft Einschränkungen, die früher in der Unterhaltung festgelegt wurden.
+
+## Fazit
+
+KI ist der mächtigste Kräfteverstärker, den wir in der Softwareentwicklung bisher gesehen haben. Ich nutze sie gerne. Ich nutze sie jeden Tag.
+
+Aber sie ist **kein** Ersatz für technisches Urteilsvermögen. Sie ist ein Werkzeug, das deine Absicht verstärkt. Wenn deine Absicht lautet „bau das schnell, mir ist egal wie", dann verstärkt sie diese Nachlässigkeit. Wenn deine Absicht lautet „hilf mir, ein robustes, sicheres System zu bauen", dann verstärkt sie dein handwerkliches Können.
+
+Lass nicht die KI das Auto fahren. Du fährst. Die KI liest die Karte.

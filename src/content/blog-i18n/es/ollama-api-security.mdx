@@ -1,0 +1,67 @@
+---
+title: "Exponiendo los riesgos de las APIs de Ollama abiertas"
+description: "Cómo el popular servicio de API de Ollama puede quedar expuesto a internet si no se asegura, y pasos prácticos para proteger tu máquina de accesos no autorizados."
+pubDate: 2025-01-23
+tags:
+  - api security
+  - ollama
+  - network security
+lang: es
+source: ollama-api-security
+---
+
+import { Image } from 'astro:assets';
+import step1Img from '../../../assets/ollama/Step1.png';
+import step2Img from '../../../assets/ollama/Step2.png';
+
+## El problema
+
+Ollama es un servicio de API popular que corre localmente en tu máquina y te permite usar modelos de IA sin depender de infraestructura externa en la nube. Opera en el puerto **11434** y se accede a través de `http://localhost:11434`.
+
+Este es el problema: Ollama no tiene autenticación integrada. Aunque esto no es una vulnerabilidad en el sentido tradicional, genera un riesgo importante. Si el puerto de tu máquina está expuesto a internet, cualquiera puede acceder a tu servicio de Ollama y usar tus recursos sin permiso.
+
+## Qué puede salir mal
+
+Sin autenticación y con un puerto abierto, un atacante podría:
+
+- Interactuar con tus modelos de IA
+- Descargar los modelos que corren en tu máquina
+- Ejecutar tareas usando los recursos de tu hardware
+
+Para desarrolladores con máquinas de alto rendimiento o que corren en proveedores de nube, esto podría traducirse en un uso considerable de recursos y facturas inesperadas.
+
+## Cómo encontré esto
+
+Mientras exploraba el comando `ollama serve`, me di cuenta de que el servicio ya está corriendo si Ollama está instalado y activo. Decidí comprobar la escala de esta exposición usando **FOFA**, un motor de búsqueda del ciberespacio.
+
+Busqué máquinas que exponen el puerto 11434 con una consulta simple: `"Ollama is running" && port="11434"`. Elegí esta firma específica porque, al acceder al endpoint raíz (`/`) de una instalación por defecto de Ollama, este devuelve exactamente esa cadena confirmando que el servicio está activo.
+
+<Image src={step1Img} alt="Consulta de búsqueda en FOFA.info mostrando la búsqueda del puerto 11434" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+Los resultados fueron preocupantes. La búsqueda devolvió **más de 60,000 hosts expuestos**:
+
+<Image src={step2Img} alt="Resultados de búsqueda en FOFA.info mostrando más de 600,000 instancias de Ollama expuestas" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+- Varias máquinas con el puerto 11434 abierto eran accesibles públicamente
+- Pude interactuar con los endpoints expuestos, descargar modelos y usar su hardware
+- Muchas instancias corrían en equipos de gran potencia, probablemente sin que sus dueños lo supieran
+
+## Cómo proteger tu servicio de Ollama
+
+Si usas Ollama, sigue estos pasos para asegurar tu servicio:
+
+### 1. Lista blanca de IPs
+
+Usa un firewall para restringir el acceso únicamente a IPs de confianza.
+
+### 2. Agrega una capa de autenticación
+
+Implementa un wrapper o un servicio proxy que exija autenticación antes de interactuar con la API de Ollama.
+
+### 3. Deshabilita el acceso público al puerto
+
+Asegúrate de que el puerto 11434 no sea accesible desde internet. Configúralo para permitir únicamente acceso local.
+
+## Conclusión
+
+Esto no se trata de culpar a Ollama, sino de entender los riesgos de correr servicios locales sin una configuración de red adecuada. Al implementar medidas básicas de seguridad, puedes proteger tu sistema de accesos no autorizados y asegurarte de que tus recursos sigan siendo tuyos.

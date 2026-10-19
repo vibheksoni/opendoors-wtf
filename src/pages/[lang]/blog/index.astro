@@ -1,0 +1,127 @@
+---
+import BaseHead from '../../../components/BaseHead.astro';
+import Footer from '../../../components/Footer.astro';
+import FormattedDate from '../../../components/FormattedDate.astro';
+import Header from '../../../components/Header.astro';
+import { siteConfig } from '../../../config/site';
+import { LANGUAGES, TRANSLATED_LANGS, postPath, t, type Lang } from '../../../i18n';
+import { buildBreadcrumbJsonLd } from '../../../utils/jsonLd';
+import { getTranslations } from '../../../utils/translations';
+
+export function getStaticPaths() {
+	return TRANSLATED_LANGS.map((lang) => ({ params: { lang } }));
+}
+
+const lang = Astro.params.lang as Lang;
+const strings = t(lang);
+const posts = (await getTranslations())
+	.filter((entry) => entry.data.lang === lang)
+	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+const pageUrl = `${siteConfig.site}/${lang}/blog/`;
+const alternates = [
+	{ lang: 'en' as Lang, href: `${siteConfig.site}/blog/` },
+	...TRANSLATED_LANGS.map((code) => ({ lang: code as Lang, href: `${siteConfig.site}/${code}/blog/` })),
+];
+const jsonLd = buildBreadcrumbJsonLd([
+	{ name: 'OpenDoors', url: `${siteConfig.site}/` },
+	{ name: strings.posts, url: pageUrl },
+]);
+---
+
+<!doctype html>
+<html lang={lang}>
+	<head>
+		<BaseHead title={strings.posts} description={strings.postsIntro} lang={lang} alternates={alternates} jsonLd={jsonLd} />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<h1>{strings.posts}</h1>
+			<p class="intro">{strings.postsIntro}</p>
+			<nav class="lang-switch" aria-label={strings.readIn}>
+				{alternates.map((alt) =>
+					alt.lang === lang ? (
+						<span class="current" aria-current="page">{LANGUAGES[alt.lang].name}</span>
+					) : (
+						<a href={alt.href} hreflang={alt.lang} lang={alt.lang}>{LANGUAGES[alt.lang].name}</a>
+					),
+				)}
+			</nav>
+			<ul class="post-list">
+				{posts.map((post) => (
+					<li>
+						<a href={postPath(lang, post.data.source)}>
+							<h2>{post.data.title}</h2>
+							<p>{post.data.description}</p>
+							<span class="date"><FormattedDate date={post.data.pubDate} locale={LANGUAGES[lang].dateLocale} /></span>
+						</a>
+					</li>
+				))}
+			</ul>
+		</main>
+		<Footer />
+	</body>
+</html>
+
+<style>
+	.intro {
+		color: var(--text-muted);
+	}
+
+	.lang-switch {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem 1rem;
+		margin: 1rem 0 0;
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+	}
+
+	.lang-switch a {
+		color: var(--silver-dim);
+		text-decoration: none;
+	}
+
+	.lang-switch a:hover,
+	.lang-switch .current {
+		color: var(--accent);
+	}
+
+	.post-list {
+		list-style: none;
+		margin: 2rem 0 0;
+		padding: 0;
+	}
+
+	.post-list li {
+		border-top: 1px solid var(--border-subtle);
+	}
+
+	.post-list a {
+		display: block;
+		padding: 1.5rem 0;
+		text-decoration: none;
+		color: inherit;
+	}
+
+	.post-list h2 {
+		margin: 0 0 0.5rem;
+		font-size: 1.35rem;
+		color: var(--text-main);
+	}
+
+	.post-list a:hover h2 {
+		color: var(--accent);
+	}
+
+	.post-list p {
+		margin: 0 0 0.75rem;
+		color: var(--text-muted);
+	}
+
+	.date {
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		color: var(--silver-dim);
+	}
+</style>

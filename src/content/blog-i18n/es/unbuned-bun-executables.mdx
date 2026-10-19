@@ -1,0 +1,212 @@
+---
+title: "Desarmando ejecutables de Bun con unbuned"
+description: "Cómo Bun empaqueta una app en un solo ejecutable y cómo unbuned encuentra el bundle, lee el grafo de módulos de Bun y recupera el TypeScript original a partir de los source maps."
+pubDate: 2026-10-18
+tags:
+  - reverse engineering
+  - bun
+  - javascript
+  - binary formats
+  - python
+lang: es
+source: unbuned-bun-executables
+---
+import { Image } from 'astro:assets';
+import droidModules from '../../../assets/unbuned/droid-modules.png';
+
+## Por qué lo construí
+
+Me gusta hacer ingeniería inversa y ver cómo funcionan las apps por dentro. Muchas de las herramientas que uso empezaron a distribuirse como apps compiladas con Bun. Agentes de código, CLIs y apps de escritorio ahora vienen todos como un solo exe grande y ya no puedes abrir una carpeta y leer el JavaScript como en una app normal de Node.
+
+Así que construí [unbuned](https://github.com/vibheksoni/unbuned). Le das el exe y te devuelve el código separado en los archivos reales con sus nombres reales. Si la app se compiló con source maps, incluso recuperas el TypeScript original. Es un solo archivo de Python sin dependencias.
+
+Este post recorre lo que realmente hay dentro de un ejecutable de Bun y cómo unbuned lo desarma. Cada número de aquí sale de un binario real y un solo comando, así que puedes comprobarlo todo tú mismo.
+
+## Qué es un ejecutable de Bun
+
+Cuando ejecutas `bun build --compile`, Bun toma su propio runtime y le pega encima tu app empaquetada. El runtime es el mismo para todas las apps. Tu código vive en su propia sección del binario:
+
+| Plataforma | Dónde vive la app |
+|---|---|
+| Windows PE | una sección llamada `.bun` |
+| Linux ELF | una sección llamada `.bun` |
+| macOS Mach-O | el segmento y sección `__BUN,__bun`, en binarios thin o universales |
+
+Esa sección es todo el objetivo. Todo lo demás en el archivo es Bun mismo y no interesa para esto. El primer trabajo es encontrar la sección.
+
+## Paso 1: Encontrar la sección
+
+En Windows eso significa recorrer la tabla de secciones del PE. La tabla empieza justo después del optional header y cada entrada mide 40 bytes, con el nombre en los primeros 8:
+
+```python
+num_sections = struct.unpack('<H', data[pe_offset+6:pe_offset+8])[0]
+optional_header_size = struct.unpack('<H', data[pe_offset+20:pe_offset+22])[0]
+section_table_offset = pe_offset + 24 + optional_header_size
+
+for i in range(num_sections):
+    section_offset = section_table_offset + (i * 40)
+    section_name = data[section_offset:section_offset+8].rstrip(b'\x00').decode('ascii', errors='ignore')
+    if section_name == '.bun':
+        ...
+```
+
+ELF y Mach-O reciben el mismo tratamiento con sus propios headers. En un Mach-O universal primero elige el slice de la arquitectura correcta. Si nada de eso funciona, recurre a buscar los magic bytes de Bun, de modo que un binario con metadatos de sección rotos aún se pueda leer.
+
+El archivo se mapea en memoria en lugar de cargarse en RAM. Algunos de estos binarios pesan casi 300 MB y no hay razón para leerlos completos.
+
+## Paso 2: Bun deja un mapa al final
+
+Esta es la parte que hizo posibles los nombres de archivo reales. Bun no se limita a concatenar tu código. Antes de escribir la sección arma una tabla de todos los archivos que embebió, llamada `StandaloneModuleGraph`, y la pone al final de todo.
+
+Los últimos 16 bytes de la sección son un marcador literal:
+
+```text
+\n---- Bun! ----\n
+```
+
+Los 32 bytes justo antes de ese marcador son un struct `Offsets`. Contiene el tamaño de los datos, un puntero a la tabla de archivos, el id del entry point y un conjunto de flags:
+
+```text
+...file records...
+Offsets   { byte_count, modules_ptr, entry_point_id, compile_exec_argv_ptr, flags }
+TRAILER   "\n---- Bun! ----\n"
+```
+
+Entonces buscas el trailer desde el final, retrocedes 32 bytes y ya sabes dónde está la tabla de archivos. Cada archivo tiene un registro de 52 bytes:
+
+```text
+name                  { u32 offset, u32 length }
+contents              { u32 offset, u32 length }
+sourcemap             { u32 offset, u32 length }
+bytecode              { u32 offset, u32 length }
+module_info           { u32 offset, u32 length }
+bytecode_origin_path  { u32 offset, u32 length }
+encoding              u8     0 binary, 1 latin1, 2 utf16
+loader                u8     0 js, 1 jsx, 2 ts, 3 tsx, 4 json, 5 file, ...
+module_format         u8     0 none, 1 esm, 2 cjs
+side                  u8     0 server, 1 client
+```
+
+Un detalle importa más de lo que parece. Cada uno de esos offsets es relativo al inicio de la sección **más** el header de longitud de 8 bytes de la propia sección. Si te olvidas de ese `+8`, cada puntero cae 8 bytes antes y toda la tabla se lee como basura. El parser también lo verifica. Si `byte_count + 8` no cae exactamente en el header, rechaza la tabla en lugar de leerla a medias.
+
+Los registros se escriben en orden de carga con el entry point primero. Eso significa que el offset de `contents` de un módulo es justo donde empieza su texto en el bundle, y ponerle nombre a un módulo se vuelve una consulta en lugar de una adivinanza. El Droid CLI de Factory es un binario de 275 MB y al correr unbuned sobre él se obtiene:
+
+```text
+modules named from module graph: 623 of 623
+Module graph: 706 embedded files
+Entry point: B:/~BUN/root/droid
+Graph loaders: 623 jsx, 43 binary, 40 file
+```
+
+<Image src={droidModules} alt="Explorador de archivos de Windows mostrando la carpeta de módulos de droid que escribió unbuned, con archivos llamados 0000-chunk-m0vzr57a.js hasta 0030-chunk-s3q890qc.js y 0008-droid.js" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+El grafo no puede darte nombres que Bun ya descartó. Cuando escribe la tabla, los chunks ya tienen hashes como `chunk-9fxe9jf7.js`, así que eso es lo que obtienes. unbuned reporta lo que el compilador registró y no finge saber más.
+
+## Paso 3: Dónde termina el JavaScript
+
+El bundle en sí es una lista de módulos compilados. Cada uno empieza con una línea de header `// @bun` y se separan con un byte NUL. Encontrar dónde empieza es fácil. Encontrar dónde termina fue la parte difícil.
+
+Justo después del último módulo vienen los metadatos de Bun, y no son binarios puros. Bun mezcla bytes imprimibles en ellos, así que la región posterior al código ronda un 60% de bytes que no son texto, mientras que el código fuente normal está por debajo del 10%. Algunos módulos además contienen bytes NUL reales, así que no basta con detenerse en el primero.
+
+Lo que funcionó fue escanear **hacia adelante** desde el último header de módulo que se sabe que es texto y detenerse donde se dispara la densidad de bytes que no son texto. Hace una pasada gruesa y luego una fina, y así cae en el byte exacto en lugar del borde de una ventana de escaneo. También busca los marcadores que Bun deja al final del código, como `//# sourceMappingURL=` y `//# debugId=`.
+
+La revisión de bytes pasa por `bytes.translate`, de modo que una sección de 150 MB se escanea dentro del código en C de CPython en lugar de un bucle de Python.
+
+Que esto quedara exacto importó. Una versión anterior se detenía en el borde de una ventana y, en el Amp CLI, cortaba por la mitad el `export default b3n();` final. Ahora ese bundle termina donde termina el código fuente y pasa `node --check`.
+
+### La sorpresa de UTF-16
+
+El Amp CLI también me enseñó que no todos los bundles de Bun son bytes planos. Toda su región de JavaScript es UTF-16, así que cada carácter ASCII va seguido de un NUL de relleno. Una búsqueda de bytes de `// @bun` no encuentra nada y todos los ratios de texto se leen como mitad binario.
+
+Así que ahora unbuned busca el marcador primero como bytes planos y luego como UTF-16 en ambos órdenes de bytes, y arrastra la codificación que encontró por todos los pasos siguientes. Los offsets se quedan en las posiciones originales de bytes, de modo que el manifiesto sigue describiendo el archivo tal como está en disco. El texto solo se convierte a UTF-8 al momento de escribirlo.
+
+## Paso 4: Recuperar el TypeScript original
+
+Si la app se compiló con source maps, Bun guarda el texto original de cada archivo dentro del registro de source map al que apunta cada módulo. Ese es el único lugar donde sobrevive el TypeScript original, porque el bundle en sí ya está aplanado en chunks.
+
+No es el source map en JSON que esperarías. Bun lee ese JSON una vez al compilar y escribe una tabla compacta en su lugar:
+
+| Offset | Contenido |
+|---|---|
+| `0` | `u32` cantidad de fuentes |
+| `4` | `u32` longitud del mapping VLQ crudo |
+| `8` | un puntero `{offset, length}` por cada ruta de fuente |
+| luego | un puntero `{offset, length}` por cada texto de fuente |
+| luego | el blob del mapping VLQ |
+| luego | cada ruta, y después cada texto de fuente comprimido con Zstandard |
+
+Las rutas son relativas al archivo que las importó, así que una dependencia compartida aparece como `../../node_modules/...`. Quitar las partes `..` iniciales deja cada archivo donde realmente estaba:
+
+```text
+src/index.ts
+src/exec/acpDaemonRunner.ts
+packages/logging/src/tracing/enums.ts
+node_modules/@opentelemetry/api/build/src/version.js
+```
+
+En Droid son 4,914 archivos originales y 42.6 MB de código fuente: 2,487 archivos de dependencias, 1,281 archivos del `src` propio de la app y 1,146 archivos de sus paquetes del workspace.
+
+Freebuff muestra por qué esto importa. Distribuye un único módulo minificado con 7.4 MB de nombres como `zUA` y `xH`, sin nada que separar. Su source map aun así tenía el proyecto real adentro y unbuned sacó 1,241 archivos originales y 13.5 MB de TypeScript y JavaScript distribuidos en las carpetas reales `src/`, `common/`, `packages/` y `sdk/`.
+
+## Lo demás que hay dentro
+
+### Bytecode
+
+Si una app se compila con `--bytecode`, el JavaScript que extraes es solo el respaldo. Lo que realmente se ejecuta es bytecode de JavaScriptCore. unbuned te avisa cuando ese es el caso y puede escribir un blob de bytecode por módulo usando los punteros del grafo de módulos. Cada blob empieza con el mismo header, y la longitud en ese header coincidió con la longitud del grafo en todos los módulos que probé, lo cual es una buena comprobación de que la extracción es correcta.
+
+No convierte el bytecode de vuelta a JavaScript. El bytecode de JSC no está documentado y cambia entre versiones, así que eso sería todo un backend de compilador y no una función de fin de semana.
+
+### Archivos embebidos
+
+Una app de Bun no es solo JavaScript. Otros archivos se guardan en la misma sección y muchos están comprimidos como frames de Zstandard. Droid trae 80 de ellos que suman unos 88 MB, incluyendo `rg.exe`, `keytar`, las bibliotecas `rust_pty` para cuatro plataformas y los archivos `SKILL.md` que lee su agente. El grafo de módulos nombra los 80, así que vuelven con sus nombres reales. Zstandard es la única pieza opcional. Sin él los archivos igual se extraen, solo que se quedan comprimidos.
+
+## Hacerlo legible
+
+Bun distribuye código minificado y el código minificado es una línea gigante por módulo. Prettier y los demás formateadores son paquetes de Node que construyen un árbol de sintaxis completo, y eso no encaja con una herramienta de Python de un solo archivo y se vuelve lento con un bundle de 40 MB.
+
+Así que unbuned tiene su propio formateador. Es un lexer de una sola pasada que solo busca las cosas que cambian el layout, como strings, template literals, comentarios, literales de regex, operadores y paréntesis, y copia todo lo demás tal cual.
+
+Tiene una regla estricta. **Solo agrega o quita espacios en blanco.** Ningún token se reescribe y nada se reordena, así que esto siempre se cumple:
+
+```python
+assert "".join(extracted.split()) == "".join(formatted.split())
+```
+
+Probar el formateador también destapó una trampa en Node. `node --check module.js` solo parsea de verdad un archivo cuando no tiene `import` ni `export`. Un bundle de Bun siempre los tiene, así que revisar por ruta de archivo pasa sin parsear nada. Tienes que pasarlo por la entrada estándar:
+
+```bash
+node --check --input-type=module < module.js
+```
+
+## Demostrar que funciona
+
+La prueba de verdad fue el CLI de Cline en la versión 3.0.68. Tiene 212 módulos separados y rompió el extractor más que cualquier otro objetivo. Un módulo se escondía detrás de un shebang que ningún patrón de header podía ver, y el formateador estaba metiendo espacios en silencio dentro de URLs en un archivo de query de tree-sitter embebido. Ambos se arreglaron gracias a este único binario.
+
+Después de esos arreglos, los módulos vueltos a armar coinciden con el bundle original byte por byte:
+
+```text
+modules: 212
+js length: 18386663
+rebuilt length: 18386663
+identical: True
+```
+
+Luego escribí el árbol de módulos de vuelta a disco con los 13 assets al lado y lo ejecuté. El CLI extraído responde `--version` con el mismo `3.0.68` que el binario real. Probé 19 comandos de solo lectura como `--version`, `--help` y `--help` en cada subcomando, y todos dieron una salida idéntica byte por byte y el mismo código de salida que el original. Eso es una comprobación mucho mejor que ver que la salida parezca JavaScript.
+
+## Pruébalo
+
+```bash
+git clone https://github.com/vibheksoni/unbuned.git
+cd unbuned
+python unbuned.py app.exe            # the merged JavaScript
+python unbuned.py app.exe --inspect  # what is inside, without writing anything
+python unbuned.py app.exe --all      # modules, original sources, assets and bytecode
+```
+
+`--all` sobre Droid escribe más de 6,000 archivos en unos cuatro segundos y medio.
+
+Si quieres verlo funcionar con algo que conoces, arma una app pequeña con `bun build --compile --sourcemap` y corre unbuned sobre ella. Deberías recuperar tus propios archivos con sus nombres reales.
+
+Úsalo en binarios que tengas permitido revisar. Está hecho para ingeniería inversa, investigación de seguridad, análisis de malware y para recuperar tu propio código cuando el proyecto ya no existe pero el exe sigue por ahí.
+
+El código está en [GitHub](https://github.com/vibheksoni/unbuned). Si algo falla con un binario de Bun que tengas abierto un issue, porque la mayoría de los arreglos de esta herramienta salieron de un binario real que la rompió.

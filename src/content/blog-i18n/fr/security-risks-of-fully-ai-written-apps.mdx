@@ -1,0 +1,64 @@
+---
+title: "L'illusion dangereuse du « développeur IA en solo »"
+description: "Pourquoi considérer l'IA comme un remplaçant de la supervision d'ingénierie produit des logiciels vulnérables, et comment travailler correctement avec l'IA comme co-développeur."
+pubDate: 2025-01-23
+tags:
+  - ai security
+  - devsecops
+  - software engineering
+  - opinion
+lang: fr
+source: security-risks-of-fully-ai-written-apps
+---
+
+## Le piège du « ça marche, c'est tout »
+
+Nous vivons un âge d'or de l'IA générative. Des outils comme Claude Code, Cursor et GitHub Copilot nous permettent de livrer des fonctionnalités plus vite que jamais. Mais je vois une tendance grandissante dans des projets open source et même dans des bases de code d'entreprise : **le développeur absent.**
+
+Cela arrive quand un humain traite l'IA non pas comme un outil, mais comme un prestataire en qui il peut avoir une confiance aveugle. Il prompte, il copie-colle, il déploie. Si ça compile, ça part en production.
+
+Cet état d'esprit est dangereux. Comme je l'ai constaté en auditant plusieurs interfaces web « entièrement générées par IA », cette approche mène à des failles de sécurité si énormes qu'on pourrait y faire passer un camion : authentification côté client, chemins de fichiers non validés et accès shell sans restriction.
+
+## L'IA est un développeur junior sous amphétamines
+
+Imaginez que vous embauchiez un développeur junior qui :
+1. Tape 1000 mots par minute.
+2. Connaît toutes les bibliothèques qui existent.
+3. N'a aucune notion des implications de sécurité, sauf si on les lui dit explicitement.
+4. Vous mentira avec aplomb s'il ne connaît pas la réponse.
+
+Laisseriez-vous ce développeur pousser en production sans revue de code ? **Non.**
+
+Pourtant, c'est exactement ce qui se passe quand on laisse l'IA faire cavalier seul sur un projet. L'IA optimise pour **résoudre le prompt immédiat**. Elle n'optimise pas naturellement pour les « inconnues inconnues », comme ce qui se passe si un utilisateur intercepte une requête, ou si un paramètre de chemin contient `../../`.
+
+## La « boucle répétitive » fatale
+
+L'un des modes d'échec les plus courants est la « boucle de contexte ». Vous demandez à l'IA de corriger un bug. Elle vous donne du code. Le code échoue. Vous recollez l'erreur. Elle vous donne une version « corrigée ».
+
+Après 5 itérations, vous avez peut-être du code qui fonctionne, mais aussi un monstre de Frankenstein fait de rustines. L'IA a perdu le fil de l'architecture globale. Elle lance simplement des spaghettis contre le mur pour satisfaire votre message d'erreur.
+
+**C'est là que naissent les vulnérabilités.** Dans la précipitation pour « passer au vert », des contrôles de sécurité sont contournés, la validation des entrées disparaît et des secrets codés en dur se glissent dans le code.
+
+## Comment vraiment utiliser l'IA (l'état d'esprit « co-développeur »)
+
+Pour construire des logiciels sûrs avec l'IA, il faut changer de modèle mental. Vous n'êtes pas le « prompteur » ; vous êtes l'**ingénieur principal**. L'IA est votre binôme de programmation.
+
+### 1. N'acceptez pas la magie
+Si l'IA écrit un bloc de code que vous ne comprenez pas, **arrêtez-vous**. Demandez-lui de l'expliquer. Si vous ne pouvez pas vérifier qu'il est sûr, partez du principe qu'il ne l'est pas.
+
+### 2. Challengez la sortie
+Parlez à l'IA comme à un collègue.
+- *« Hé, tu as supprimé le jeton CSRF dans ce refactoring. Pourquoi ? »*
+- *« Ce gestionnaire d'entrée a l'air vulnérable au XSS. Réécris-le avec de la sanitisation. »*
+- *« Tu utilises `dangerouslySetInnerHTML` ici. Y a-t-il une façon plus sûre de faire ? »*
+
+### 3. Relisez les diffs, pas seulement le résultat
+Ne regardez pas seulement le fichier final. Regardez le *diff*. L'IA a-t-elle discrètement supprimé un commentaire `TODO` ? A-t-elle retiré une vérification de permission ? Les modèles d'IA ont une fenêtre de contexte limitée ; ils « oublient » souvent des contraintes établies plus tôt dans la conversation.
+
+## Conclusion
+
+L'IA est le multiplicateur de force le plus puissant que nous ayons vu en ingénierie logicielle. J'adore l'utiliser. Je l'utilise tous les jours.
+
+Mais ce n'est **pas** un remplaçant du jugement d'ingénieur. C'est un outil qui amplifie votre intention. Si votre intention est « construis ça vite et peu importe comment », il amplifiera cette imprudence. Si votre intention est « aide-moi à construire un système robuste et sûr », il amplifiera votre savoir-faire.
+
+Ne laissez pas l'IA conduire la voiture. C'est vous qui conduisez. Laissez l'IA lire la carte.

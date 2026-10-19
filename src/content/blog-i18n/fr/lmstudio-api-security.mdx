@@ -1,0 +1,62 @@
+---
+title: "Les risques cachés des serveurs LM Studio exposés"
+description: "Enquête sur la façon dont la fonction de serveur local de LM Studio peut exposer vos modèles d'IA sur l'internet public, et comment le sécuriser."
+pubDate: 2025-01-23
+tags:
+  - api security
+  - lmstudio
+  - network security
+lang: fr
+source: lmstudio-api-security
+---
+
+import { Image } from 'astro:assets';
+import step1Img from '../../../assets/lmstudio/Step1.png';
+import step2Img from '../../../assets/lmstudio/Step2.png';
+
+## Le problème
+
+LM Studio est une application puissante avec interface graphique qui rend l'exécution de LLM en local accessible à tout le monde. Elle inclut une fonction pratique : un **serveur local** qui fournit une API compatible OpenAI sur le port **1234**.
+
+Ce serveur permet d'utiliser vos modèles locaux avec d'autres applications ou de les partager sur votre réseau local. Cependant, comme beaucoup d'outils pour développeurs, il privilégie la facilité d'utilisation à la sécurité par défaut. Quand vous activez le serveur, surtout si vous cochez « Serve on Local Network » sans pare-feu correct, vous risquez d'ouvrir une porte sur tout internet.
+
+## Ce qui peut mal tourner
+
+Le serveur de LM Studio n'impose aucune authentification par défaut. Si votre machine est directement connectée à internet ou si votre routeur redirige le port 1234, un attaquant peut :
+
+- **Interroger vos modèles :** utiliser vos ressources de calcul pour générer du texte ou du code.
+- **Faire grimper votre facture d'électricité :** une inférence continue sur votre GPU consomme beaucoup d'énergie.
+- **Accéder au contexte chargé :** si le modèle conserve du contexte de sessions précédentes (selon l'implémentation), des données sensibles pourraient théoriquement être exposées.
+
+## Comment j'ai trouvé ça
+
+Je voulais voir si la philosophie de conception « facile à utiliser » avait conduit à des expositions accidentelles semblables à celles qu'on voit avec d'autres outils de développement. LM Studio possède dans son interface une option précise pour activer le serveur.
+
+Je me suis tourné vers **FOFA**, un moteur de recherche du cyberespace, pour chercher des instances exposées.
+
+J'ai recherché les machines qui exposent le port 1234 avec une signature propre à la réponse du serveur de LM Studio. La requête que j'ai utilisée était : `port="1234" && body="LM Studio"`.
+
+<Image src={step1Img} alt="Requête de recherche FOFA.info montrant une recherche sur le port 1234 pour LM Studio" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+Les résultats ont confirmé mes soupçons. J'ai trouvé **plus de 3 000 hôtes exposés** :
+
+<Image src={step2Img} alt="Résultats de recherche FOFA.info affichant plus de 3 000 instances LM Studio exposées" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+Ce ne sont pas de simples serveurs vides ; ce sont des points d'accès d'API pleinement fonctionnels qui attendent des prompts.
+
+## Comment protéger votre instance LM Studio
+
+Si vous utilisez la fonction serveur de LM Studio, suivez ces étapes pour rester en sécurité :
+
+### 1. Écouter uniquement sur localhost
+À moins d'avoir besoin d'accéder à LM Studio depuis un autre appareil, assurez-vous que le serveur écoute sur `127.0.0.1` (localhost) plutôt que sur `0.0.0.0` (toutes les interfaces). Dans l'interface de LM Studio, vérifiez les paramètres de votre serveur.
+
+### 2. Utiliser un pare-feu
+Si vous devez absolument activer « Serve on Local Network », configurez le pare-feu de votre système (Windows Defender ou le pare-feu macOS) ou votre routeur pour bloquer le trafic entrant sur le port 1234 depuis l'internet public. N'autorisez les connexions que depuis des adresses IP locales de confiance.
+
+### 3. Désactiver le serveur quand vous ne l'utilisez pas
+La défense la plus simple est de l'éteindre. Ne démarrez le serveur local que lorsque vous l'utilisez activement pour du développement ou des tests.
+
+## Conclusion
+
+Des outils comme LM Studio démocratisent l'IA, mais ils apportent aussi des responsabilités de sécurité dignes du cloud sur le poste de travail. Une simple case à cocher dans une interface peut exposer votre matériel au monde entier. Vérifiez toujours votre exposition réseau quand vous activez des fonctions serveur sur des outils locaux.

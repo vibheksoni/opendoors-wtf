@@ -9,15 +9,36 @@ import { siteConfig } from '../config/site';
 import { buildBlogPostingJsonLd, buildBreadcrumbJsonLd } from '../utils/jsonLd';
 import { toSlug, toTitle } from '../utils/tags';
 import authorPhoto from '../assets/vibhek-soni.jpg';
+import { LANGUAGES, t, type Lang } from '../i18n';
 
-type Props = CollectionEntry<'blog'>['data'] & { wordCount?: number; markdownUrl?: string };
+type Props = CollectionEntry<'blog'>['data'] & {
+	wordCount?: number;
+	markdownUrl?: string;
+	lang?: Lang;
+	alternates?: Array<{ lang: Lang; href: string }>;
+	originalUrl?: string;
+};
 
-const { title, description, pubDate, updatedDate, heroImage, tags, canonical, wordCount, markdownUrl } = Astro.props;
+const {
+	title,
+	description,
+	pubDate,
+	updatedDate,
+	heroImage,
+	tags,
+	canonical,
+	wordCount,
+	markdownUrl,
+	lang = 'en',
+	alternates = [],
+	originalUrl,
+} = Astro.props;
+const strings = t(lang);
 const pageUrl = new URL(Astro.url.pathname, Astro.site).toString();
 const heroUrl = new URL(heroImage ? heroImage.src : siteConfig.defaults.ogImage, Astro.site).toString();
 const breadcrumb = buildBreadcrumbJsonLd([
 	{ name: 'Home', url: Astro.site?.toString() ?? siteConfig.site },
-	{ name: 'Blog', url: new URL('/blog/', Astro.site ?? siteConfig.site).toString() },
+	{ name: 'Blog', url: new URL(lang === 'en' ? '/blog/' : `/${lang}/blog/`, Astro.site ?? siteConfig.site).toString() },
 	{ name: title, url: pageUrl },
 ]);
 const blogJsonLd = buildBlogPostingJsonLd({
@@ -30,6 +51,8 @@ const blogJsonLd = buildBlogPostingJsonLd({
 	keywords: tags,
 	wordCount,
 	markdownUrl,
+	lang,
+	originalUrl,
 });
 
 const basePath = import.meta.env.BASE_URL;
@@ -39,7 +62,7 @@ const withBase = (path: string) => {
 };
 ---
 
-<html lang="en">
+<html lang={lang}>
 	<head>
 		<BaseHead
 			title={title}
@@ -47,6 +70,8 @@ const withBase = (path: string) => {
 			image={heroImage}
 			ogType="article"
 			canonical={canonical}
+			lang={lang}
+			alternates={alternates}
 			publishedTime={pubDate}
 			modifiedTime={updatedDate}
 			tags={tags}
@@ -123,6 +148,31 @@ const withBase = (path: string) => {
 			.tag-list a:hover {
 				color: var(--accent);
 			}
+			.lang-switch {
+				display: flex;
+				flex-wrap: wrap;
+				justify-content: center;
+				gap: 0.35rem 1rem;
+				margin-top: 1rem;
+				font-family: var(--font-mono);
+				font-size: 0.78rem;
+				color: var(--silver-dim);
+			}
+			.lang-switch a {
+				color: var(--silver-dim);
+				text-decoration: none;
+			}
+			.lang-switch a:hover {
+				color: var(--accent);
+			}
+			.lang-switch .current {
+				color: var(--accent);
+			}
+			.translated-note {
+				margin: 0.75rem 0 0;
+				font-size: 0.85rem;
+				color: var(--silver-dim);
+			}
 			.author-box {
 				display: flex;
 				gap: 1.25rem;
@@ -188,11 +238,11 @@ const withBase = (path: string) => {
 				<div class="prose">
 					<header class="title">
 						<div class="date">
-							<FormattedDate date={pubDate} />
+							<FormattedDate date={pubDate} locale={LANGUAGES[lang].dateLocale} />
 							{
 								updatedDate && (
 									<div class="last-updated-on">
-										Last updated on <FormattedDate date={updatedDate} />
+										{strings.updated} <FormattedDate date={updatedDate} locale={LANGUAGES[lang].dateLocale} />
 									</div>
 								)
 							}
@@ -207,22 +257,37 @@ const withBase = (path: string) => {
 								))}
 							</ul>
 						) : null}
+						{alternates.length > 1 && (
+							<nav class="lang-switch" aria-label={strings.readIn}>
+								<span>{strings.readIn}</span>
+								{alternates.map((alt) =>
+									alt.lang === lang ? (
+										<span class="current" aria-current="page">{LANGUAGES[alt.lang].name}</span>
+									) : (
+										<a href={alt.href} hreflang={alt.lang} lang={alt.lang}>{LANGUAGES[alt.lang].name}</a>
+									),
+								)}
+							</nav>
+						)}
+						{originalUrl && (
+							<p class="translated-note">{strings.translatedFrom} <a href={originalUrl} hreflang="en">English</a>.</p>
+						)}
 						<hr />
 					</header>
 					<slot />
 					<aside class="author-box" aria-label="About the author">
 						<Image src={authorPhoto} alt="Vibhek Soni" width={128} height={128} class="author-photo" />
 						<div>
-							<p class="author-name">Written by <a href={siteConfig.author.url} rel="author">{siteConfig.author.name}</a></p>
-							<p class="author-bio">{siteConfig.author.bio}</p>
+							<p class="author-name">{strings.writtenBy} <a href={siteConfig.author.url} rel="author">{siteConfig.author.name}</a></p>
+							<p class="author-bio">{strings.bio}</p>
 							<p class="author-links">
 								<a href={siteConfig.socials.github} rel="me noreferrer" target="_blank">GitHub</a>
 								<a href={siteConfig.socials.x} rel="me noreferrer" target="_blank">X</a>
 								<a href={siteConfig.socials.linkedin} rel="me noreferrer" target="_blank">LinkedIn</a>
-								<a href={`mailto:${siteConfig.author.email}`}>Email</a>
-								{markdownUrl && <a href={markdownUrl}>Read as Markdown</a>}
+								<a href={`mailto:${siteConfig.author.email}`}>{strings.email}</a>
+								{markdownUrl && <a href={markdownUrl}>{strings.readMarkdown}</a>}
 							</p>
-							<p class="support">If this helped you, you can <a href={siteConfig.socials.buymeacoffee} target="_blank" rel="noreferrer">buy me a coffee</a>, or <a href={siteConfig.socials.devagency} target="_blank" rel="noreferrer">work with me through DevHive Studios</a>.</p>
+							<p class="support">{strings.support} <a href={siteConfig.socials.buymeacoffee} target="_blank" rel="noreferrer">{strings.coffee}</a> {strings.or} <a href={siteConfig.socials.devagency} target="_blank" rel="noreferrer">{strings.work}</a>.</p>
 						</div>
 					</aside>
 				</div>

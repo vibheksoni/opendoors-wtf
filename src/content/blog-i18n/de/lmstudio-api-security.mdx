@@ -1,0 +1,62 @@
+---
+title: "Die versteckten Risiken offen erreichbarer LM-Studio-Server"
+description: "Eine Untersuchung, wie die Funktion des lokalen Servers in LM Studio deine KI-Modelle im öffentlichen Internet exponieren kann und wie du sie absicherst."
+pubDate: 2025-01-23
+tags:
+  - api security
+  - lmstudio
+  - network security
+lang: de
+source: lmstudio-api-security
+---
+
+import { Image } from 'astro:assets';
+import step1Img from '../../../assets/lmstudio/Step1.png';
+import step2Img from '../../../assets/lmstudio/Step2.png';
+
+## Das Problem
+
+LM Studio ist eine leistungsstarke Anwendung mit grafischer Oberfläche, die den Betrieb lokaler LLMs für jeden zugänglich macht. Sie bringt eine praktische Funktion mit: einen **lokalen Server**, der eine OpenAI-kompatible API auf Port **1234** bereitstellt.
+
+Mit diesem Server kannst du deine lokalen Modelle in anderen Anwendungen nutzen oder im lokalen Netzwerk teilen. Wie viele Entwicklertools stellt er aber standardmäßig die einfache Bedienung über die Sicherheit. Wenn du den Server aktivierst, vor allem wenn du "Serve on Local Network" einschaltest und keine ordentliche Firewall hast, öffnest du möglicherweise eine Tür zum gesamten Internet.
+
+## Was schiefgehen kann
+
+Der Server von LM Studio erzwingt standardmäßig keine Authentifizierung. Wenn dein Rechner direkt mit dem Internet verbunden ist oder dein Router Port 1234 weiterleitet, kann ein Angreifer:
+
+- **Deine Modelle abfragen:** Deine Rechenleistung nutzen, um Text oder Code zu generieren.
+- **Deine Stromrechnung in die Höhe treiben:** Dauerhafte Inferenz auf deiner GPU verbraucht erheblich Strom.
+- **Auf geladenen Kontext zugreifen:** Hat das Modell Kontext aus früheren Sitzungen (je nach Implementierung), könnten sensible Daten theoretisch offengelegt werden.
+
+## Wie ich darauf gestoßen bin
+
+Ich wollte herausfinden, ob die Designphilosophie "einfache Bedienung" zu versehentlicher Exposition geführt hat, ähnlich wie bei anderen Entwicklertools. LM Studio hat in der GUI einen eigenen Schalter, um den Server zu aktivieren.
+
+Ich habe **FOFA** verwendet, eine Suchmaschine für den Cyberspace, um nach offen erreichbaren Instanzen zu suchen.
+
+Ich habe nach Rechnern gesucht, die Port 1234 offenlegen und eine für die Server-Antwort von LM Studio spezifische Signatur zeigen. Die Abfrage, die ich verwendet habe, war: `port="1234" && body="LM Studio"`.
+
+<Image src={step1Img} alt="FOFA.info-Suchanfrage, die eine Suche nach Port 1234 für LM Studio zeigt" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+Die Ergebnisse bestätigten meinen Verdacht. Ich habe **über 3.000 offen erreichbare Hosts** gefunden:
+
+<Image src={step2Img} alt="FOFA.info-Suchergebnisse mit über 3.000 offen erreichbaren LM-Studio-Instanzen" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+Das sind keine leeren Server, sondern voll funktionsfähige API-Endpunkte, die nur auf Prompts warten.
+
+## So schützt du deine LM-Studio-Instanz
+
+Wenn du die Server-Funktion von LM Studio nutzt, halte dich an diese Schritte, um sicher zu bleiben:
+
+### 1. Nur an Localhost binden
+Wenn du nicht ausdrücklich von einem anderen Gerät auf LM Studio zugreifen musst, stelle sicher, dass der Server auf `127.0.0.1` (Localhost) lauscht und nicht auf `0.0.0.0` (alle Schnittstellen). Prüfe die Servereinstellungen in der LM-Studio-GUI.
+
+### 2. Eine Firewall verwenden
+Wenn du "Serve on Local Network" nutzen musst, konfiguriere die Firewall deines Betriebssystems (Windows Defender oder macOS-Firewall) oder deinen Router so, dass eingehender Datenverkehr auf Port 1234 aus dem öffentlichen Internet blockiert wird. Erlaube Verbindungen nur von vertrauenswürdigen lokalen IP-Adressen.
+
+### 3. Den Server deaktivieren, wenn du ihn nicht brauchst
+Die einfachste Verteidigung ist, ihn auszuschalten. Starte den Local Server nur, wenn du ihn aktiv für Entwicklung oder Tests nutzt.
+
+## Fazit
+
+Tools wie LM Studio demokratisieren KI, bringen aber auch Sicherheitsverantwortung auf Cloud-Niveau auf den Desktop. Ein einziges Kontrollkästchen in einer GUI kann deine Hardware der ganzen Welt preisgeben. Prüfe immer deine Netzwerk-Exposition, wenn du Server-Funktionen in lokalen Tools aktivierst.

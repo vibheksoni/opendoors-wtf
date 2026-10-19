@@ -19,6 +19,7 @@ export const GET: APIRoute = async () => {
 		`Author: ${author.name}, also known as ${author.alternateName.slice(0, 2).join(' and ')}. ${author.bio}`,
 		`Main topics: ${topics}.`,
 		'Every post is also available as plain Markdown at the same URL with .md instead of a trailing slash.',
+		'Translations of most posts are available in Spanish (/es/blog/), Portuguese (/pt/blog/), German (/de/blog/), French (/fr/blog/) and Japanese (/ja/blog/). English is the original.',
 		'',
 		'## Posts',
 		'',

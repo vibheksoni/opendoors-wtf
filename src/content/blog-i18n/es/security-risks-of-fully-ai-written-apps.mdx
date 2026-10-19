@@ -1,0 +1,64 @@
+---
+title: "La peligrosa ilusión del 'desarrollador de IA en solitario'"
+description: "Por qué tratar a la IA como un reemplazo de la supervisión de ingeniería lleva a software vulnerable, y cómo trabajar correctamente con la IA como co-desarrolladora."
+pubDate: 2025-01-23
+tags:
+  - ai security
+  - devsecops
+  - software engineering
+  - opinion
+lang: es
+source: security-risks-of-fully-ai-written-apps
+---
+
+## La trampa del "simplemente funciona"
+
+Estamos viviendo una era dorada de la IA generativa. Herramientas como Claude Code, Cursor y GitHub Copilot nos permiten entregar funcionalidades más rápido que nunca. Pero hay una tendencia creciente que veo en proyectos de código abierto e incluso en bases de código empresariales: **El Desarrollador Ausente.**
+
+Esto pasa cuando una persona trata a la IA no como una herramienta, sino como un contratista en el que puede confiar a ciegas. Escribe el prompt, copia y pega, despliega. Si compila, se publica.
+
+Esta mentalidad es peligrosa. Como descubrí al auditar varias interfaces web "totalmente generadas por IA", este enfoque produce agujeros de seguridad tan grandes que podrías pasar un camión por ellos: autenticación del lado del cliente, rutas de archivos sin validar y acceso irrestricto a la shell.
+
+## La IA es un desarrollador junior con anfetaminas
+
+Imagina contratar a un desarrollador junior que:
+1. Escribe 1000 palabras por minuto.
+2. Conoce todas las librerías que existen.
+3. No tiene ningún concepto de las implicaciones de seguridad a menos que se le diga explícitamente.
+4. Te mentirá con total seguridad si no sabe la respuesta.
+
+¿Dejarías que ese desarrollador hiciera push a producción sin una revisión de código? **No.**
+
+Sin embargo, eso es exactamente lo que pasa cuando dejamos que la IA lleve un proyecto "en solitario". La IA optimiza para **resolver el prompt inmediato**. No optimiza por naturaleza para las "incógnitas desconocidas", como lo que ocurre si un usuario intercepta una petición, o si un parámetro de ruta contiene `../../`.
+
+## El "bucle repetitivo" de la perdición
+
+Uno de los modos de fallo más comunes es el "Bucle de Contexto". Le pides a la IA que arregle un bug. Te da código. El código falla. Pegas el error de vuelta. Te da una versión "corregida".
+
+Tras 5 iteraciones, quizá tengas código que funciona, pero también tienes un monstruo de Frankenstein hecho de parches. La IA ha perdido el hilo de la arquitectura general. Solo está tirando espagueti a la pared para satisfacer tu mensaje de error.
+
+**Aquí es donde nacen las vulnerabilidades.** Con las prisas por "ponerlo en verde", se saltan las comprobaciones de seguridad, se elimina la validación de entradas y se cuelan secretos hardcodeados.
+
+## Cómo usar realmente la IA (La mentalidad de "Co-desarrollador")
+
+Para construir software seguro con IA, necesitas cambiar tu modelo mental. No eres el "prompter"; eres el **Ingeniero Líder**. La IA es tu compañera de pair programming.
+
+### 1. No aceptes la magia
+Si la IA escribe un bloque de código que no entiendes, **detente**. Pídele que lo explique. Si no puedes verificar que es seguro, asume que no lo es.
+
+### 2. Cuestiona el resultado
+Habla con la IA como con un colega.
+- *"Oye, quitaste el token CSRF en este refactor. ¿Por qué?"*
+- *"Este manejador de entrada parece vulnerable a XSS. Reescríbelo con sanitización."*
+- *"Estás usando `dangerouslySetInnerHTML` aquí. ¿Hay una forma más segura?"*
+
+### 3. Revisa los diffs, no solo el resultado
+No mires solo el archivo final. Mira el *diff*. ¿La IA borró a escondidas un comentario `TODO`? ¿Quitó una comprobación de permisos? Los modelos de IA tienen una ventana de contexto limitada; a menudo "olvidan" restricciones establecidas antes en la conversación.
+
+## Conclusión
+
+La IA es el multiplicador de fuerza más poderoso que hemos visto en la ingeniería de software. Me encanta usarla. La uso todos los días.
+
+Pero **no** es un reemplazo del criterio de ingeniería. Es una herramienta que amplifica tu intención. Si tu intención es "construye esto rápido y no me importa cómo", amplificará esa imprudencia. Si tu intención es "ayúdame a construir un sistema robusto y seguro", amplificará tu oficio.
+
+No dejes que la IA conduzca el coche. Conduces tú. Deja que la IA lea el mapa.

@@ -1,0 +1,67 @@
+---
+title: "OpenCode Web: Gran herramienta, peligroso valor por defecto"
+description: "OpenCode es una potente alternativa multi-LLM a Claude Code. Pero su interfaz web puede ser una pesadilla de seguridad si no se configura bien. Así se asegura."
+pubDate: 2025-01-23
+tags:
+  - api security
+  - web security
+  - ai security
+  - network security
+  - broken access control
+  - rce
+  - devsecops
+  - software engineering
+lang: es
+source: opencode-web-security
+---
+
+import { Image } from 'astro:assets';
+import step1Img from '../../../assets/opencode-web/Steps1.png';
+import step2Img from '../../../assets/opencode-web/Steps2.png';
+
+## ¿La mejor alternativa?
+
+He estado usando **OpenCode** últimamente y, la verdad, me parece una alternativa superior a Claude Code en muchos sentidos. Soporta varios proveedores de LLM (Ollama, OpenAI, Anthropic, etc.), es de código abierto y se siente más rápido. La flexibilidad de cambiar de modelo al vuelo lo convierte en una bestia para el desarrollo local.
+
+Sin embargo, como muchas herramientas para desarrolladores de este tipo, incluye un modo "Web UI" (`opencode web`) que convierte tu CLI en una aplicación dentro del navegador. Es genial para la usabilidad, pero abre un enorme agujero de seguridad si no tienes cuidado.
+
+## El riesgo
+
+Cuando ejecutas `opencode web`, se levanta un servidor. Si lo enlazas a `0.0.0.0` (todas las interfaces) para acceder desde otro dispositivo de tu red, potencialmente estás exponiendo una vulnerabilidad de **ejecución remota de código (RCE)** a todo internet.
+
+Igual que la Web UI de Claude Code sobre la que escribí antes, la interfaz web de OpenCode permite al usuario ejecutar comandos, editar archivos e interactuar con la shell. Sin autenticación, cualquiera que encuentre tu dirección IP se convierte en el administrador de tu máquina.
+
+## La exposición (búsqueda en FOFA)
+
+Hice una comprobación rápida en **FOFA** para ver si esto estaba pasando en el mundo real.
+Consulta de búsqueda: `title="OpenCode"`
+
+<Image src={step1Img} alt="Consulta de búsqueda en FOFA.info para instancias de OpenCode" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+Encontré **32 hosts expuestos** de inmediato.
+
+<Image src={step2Img} alt="Resultados de FOFA que muestran 32 instancias web de OpenCode expuestas" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+Aunque 32 pueda sonar poco, recuerda que es una herramienta de nicho para desarrolladores. Son 32 desarrolladores que probablemente expusieron por accidente todo su entorno de desarrollo a la web pública. Como OpenCode es personalizable, es posible que muchos usuarios ejecuten versiones modificadas que no aparecen en esta simple búsqueda por título, así que el número real probablemente sea mayor.
+
+## Cómo asegurarlo
+
+Los desarrolladores de OpenCode sí incluyeron un mecanismo de seguridad, pero hay que usarlo.
+
+### 1. Define una contraseña
+Puedes proteger la interfaz web con una contraseña. Este simple paso evita el acceso no autorizado.
+
+Ejecuta este comando antes de iniciar el servidor web:
+```bash
+opencode --set-password <your-strong-password>
+```
+*Como alternativa, puedes definir la variable de entorno `OPENCODE_SERVER_PASSWORD`.*
+
+### 2. No lo expongas a internet
+A menos que tengas un motivo muy específico (y una VPN o un túnel), no redirijas el puerto de OpenCode a internet público. Mantenlo en `localhost` (`127.0.0.1`) o estrictamente dentro de tu red local de confianza (`LAN`).
+
+## Conclusión
+
+OpenCode es una herramienta increíble que recomiendo mucho por su soporte multimodelo y su velocidad. Pero "potente" significa "peligroso" si le quitas las salvaguardas.
+
+No dejes que tu asistente de programación se convierta en la puerta de entrada de un atacante. Pon una contraseña.
