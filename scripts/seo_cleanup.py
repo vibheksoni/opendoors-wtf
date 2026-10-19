@@ -35,8 +35,15 @@ if "alternates=" not in text:
 # 2. Tag pages: a short description instead of every post title.
 path = PAGES / "tags" / "[tag].astro"
 text = path.read_text(encoding="utf-8")
-old = "const description = `${posts.length} ${posts.length === 1 ? 'writeup' : 'writeups'} on ${tag} by ${siteConfig.author.name}: ${posts.map((post) => post.data.title).join('; ')}.`;"
-new = "const description = `OpenDoors writeups on ${tag} by ${siteConfig.author.name}. ${posts.length} ${posts.length === 1 ? 'post' : 'posts'} on reverse engineering, security research and backend engineering.`;"
+old = (
+    "const description = `${posts.length} ${posts.length === 1 ? 'writeup' : 'writeups'} "
+    "on ${tag} by ${siteConfig.author.name}: ${posts.map((post) => post.data.title).join('; ')}.`;"
+)
+new = (
+    "const description = `OpenDoors writeups on ${tag} by ${siteConfig.author.name}. "
+    "${posts.length} ${posts.length === 1 ? 'post' : 'posts'} on reverse engineering, "
+    "security research and backend engineering.`;"
+)
 if old in text:
     text = text.replace(old, new)
     path.write_text(text, encoding="utf-8")
@@ -59,28 +66,41 @@ if old in text:
 ALTS = {
     "stealth-browser-mcp.mdx": [
         (
-            'alt="Diagram showing an AI agent talking to the stealth-browser-mcp FastMCP server over stdio JSON-RPC, which drives a real Chrome over CDP, with the stdout guard, trusted input, network tools and element cloning modules listed underneath"',
-            'alt="Diagram of the agent to FastMCP server to real Chrome path over stdio and CDP, with the main modules underneath"',
+            'alt="Diagram showing an AI agent talking to the stealth-browser-mcp FastMCP '
+            'server over stdio JSON-RPC, which drives a real Chrome over CDP, with the stdout '
+            'guard, trusted input, network tools and element cloning modules listed underneath"',
+            'alt="Diagram of the agent to FastMCP server to real Chrome path over stdio and CDP, '
+            'with the main modules underneath"',
         ),
         (
-            'alt="Screenshot of the Augment Code hero section rebuilt as a clone, with the original headline, layout and styling reproduced in HTML"',
-            'alt="The Augment Code hero rebuilt as a clone, with the original headline, layout and styling"',
+            'alt="Screenshot of the Augment Code hero section rebuilt as a clone, with the '
+            'original headline, layout and styling reproduced in HTML"',
+            'alt="The Augment Code hero rebuilt as a clone, with the original headline, '
+            'layout and styling"',
         ),
     ],
     "unbuned-bun-executables.mdx": [
         (
-            'alt="Diagram of the .bun section showing the length header, the JavaScript modules, the embedded data, then the file table, the 32 byte Offsets struct and the trailer marker at the very end"',
-            'alt="Layout of the .bun section from the length header through the modules and the file table to the trailer marker"',
+            'alt="Diagram of the .bun section showing the length header, the JavaScript "'
+            'modules, the embedded data, then the file table, the 32 byte Offsets struct '
+            'and the trailer marker at the very end"',
+            'alt="Layout of the .bun section from the length header through the modules '
+            'and the file table to the trailer marker"',
         ),
         (
-            'alt="Windows Explorer showing the droid modules folder unbuned wrote, with files named 0000-chunk-m0vzr57a.js through 0030-chunk-s3q890qc.js and 0008-droid.js"',
-            'alt="Explorer showing the droid modules folder unbuned wrote, with the chunk files named from the module graph"',
+            'alt="Windows Explorer showing the droid modules folder unbuned wrote, with files '
+            'named 0000-chunk-m0vzr57a.js through 0030-chunk-s3q890qc.js and 0008-droid.js"',
+            'alt="Explorer showing the droid modules folder unbuned wrote, with the chunk '
+            'files named from the module graph"',
         ),
     ],
     "security-risks-of-fully-ai-written-apps.mdx": [
         (
-            'alt="Diagram of a five step review loop between a person and an AI agent. You ask, the AI drafts, you read the diff, you push back and the checks pass before it ships. A return arrow sends a rejected draft back to the AI to try again."',
-            'alt="A five step review loop between a person and an AI agent, with a rejected draft going back for another try"',
+            'alt="Diagram of a five step review loop between a person and an AI agent. '
+            'You ask, the AI drafts, you read the diff, you push back and the checks pass '
+            'before it ships. A return arrow sends a rejected draft back to the AI to try again."',
+            'alt="A five step review loop between a person and an AI agent, with a rejected '
+            'draft going back for another try"',
         ),
     ],
 }
@@ -114,16 +134,22 @@ print("translation alt text trimmed in", count, "files")
 # 5. Two descriptions were still long enough to be cut off in results.
 LONG = {
     "ferrox-stealer-research.mdx": (
-        "How Ferrox, a Rust Windows stealer, uses Hell's Gate syscalls, polymorphic builds and a Chrome App-Bound Encryption bypass. Analyzed in an isolated VM.",
-        "How Ferrox, a Rust stealer, uses Hell's Gate syscalls, polymorphic builds and a Chrome App-Bound bypass. Analyzed in an isolated VM.",
+        "How Ferrox, a Rust Windows stealer, uses Hell's Gate syscalls, polymorphic builds "
+        "and a Chrome App-Bound Encryption bypass. Analyzed in an isolated VM.",
+        "How Ferrox, a Rust stealer, uses Hell's Gate syscalls, polymorphic builds and "
+        "a Chrome App-Bound bypass. Analyzed in an isolated VM.",
     ),
     "dma-hwid-spoofer.mdx": (
-        "How I reverse engineered Windows 11 kernel drivers in IDA Pro to build a DMA hardware ID spoofer in Rust, covering PatchGuard, DSE, SMBIOS and 12 spoofing modules.",
-        "How I reversed Windows 11 kernel drivers in IDA Pro to build a DMA hardware ID spoofer in Rust, covering PatchGuard, DSE and SMBIOS.",
+        "How I reverse engineered Windows 11 kernel drivers in IDA Pro to build a DMA "
+        "hardware ID spoofer in Rust, covering PatchGuard, DSE, SMBIOS and 12 spoofing modules.",
+        "How I reversed Windows 11 kernel drivers in IDA Pro to build a DMA hardware ID "
+        "spoofer in Rust, covering PatchGuard, DSE and SMBIOS.",
     ),
     "claude-code-webui-security.mdx": (
-        "A security analysis of open-source web UIs for Claude Code. Finding unauthenticated RCE, path traversal, and client-side auth bypasses in community projects.",
-        "A security analysis of open-source web UIs for Claude Code, with unauthenticated RCE, path traversal and client-side auth bypasses.",
+        "A security analysis of open-source web UIs for Claude Code. Finding unauthenticated "
+        "RCE, path traversal, and client-side auth bypasses in community projects.",
+        "A security analysis of open-source web UIs for Claude Code, with unauthenticated "
+        "RCE, path traversal and client-side auth bypasses.",
     ),
 }
 for name, (old, new) in LONG.items():
