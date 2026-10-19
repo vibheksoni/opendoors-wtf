@@ -5,28 +5,49 @@ import Footer from '../../components/Footer.astro';
 import FormattedDate from '../../components/FormattedDate.astro';
 import Header from '../../components/Header.astro';
 import { siteConfig } from '../../config/site';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
 import { buildBreadcrumbJsonLd } from '../../utils/jsonLd';
 import { sortPosts } from '../../utils/posts';
-import { toTitle } from '../../utils/tags';
+import { toSlug, toTitle } from '../../utils/tags';
 
 export async function getStaticPaths() {
 	const posts = sortPosts(await getCollection('blog'));
 	const tags = new Set(posts.flatMap((post) => post.data.tags));
 
 	return Array.from(tags).map((tag) => ({
-		params: { tag },
+		params: { tag: toSlug(tag) },
 		props: { tag },
 	}));
 }
 
 const { tag } = Astro.props;
 const posts = sortPosts(await getCollection('blog')).filter((post) => post.data.tags.includes(tag));
-const jsonLd = buildBreadcrumbJsonLd([
-	{ name: 'Home', url: Astro.site?.toString() ?? siteConfig.site },
-	{ name: 'Tags', url: new URL('/tags/', Astro.site ?? siteConfig.site).toString() },
-	{ name: toTitle(tag), url: new URL(`/tags/${tag}/`, Astro.site ?? siteConfig.site).toString() },
-]);
+const pageUrl = new URL(`/tags/${toSlug(tag)}/`, Astro.site ?? siteConfig.site).toString();
+const title = `${toTitle(tag)} posts`;
+const description = `${posts.length} ${posts.length === 1 ? 'writeup' : 'writeups'} on ${tag} by ${siteConfig.author.name}: ${posts.map((post) => post.data.title).join('; ')}.`;
+const jsonLd = [
+	buildBreadcrumbJsonLd([
+		{ name: 'Home', url: Astro.site?.toString() ?? siteConfig.site },
+		{ name: 'Topics', url: new URL('/tags/', Astro.site ?? siteConfig.site).toString() },
+		{ name: toTitle(tag), url: pageUrl },
+	]),
+	{
+		'@context': 'https://schema.org',
+		'@type': 'CollectionPage',
+		name: title,
+		url: pageUrl,
+		about: tag,
+		inLanguage: siteConfig.language,
+		mainEntity: {
+			'@type': 'ItemList',
+			itemListElement: posts.map((post, index) => ({
+				'@type': 'ListItem',
+				position: index + 1,
+				url: new URL(`/blog/${post.id}/`, Astro.site ?? siteConfig.site).toString(),
+				name: post.data.title,
+			})),
+		},
+	},
+];
 
 const basePath = import.meta.env.BASE_URL;
 const withBase = (path: string) => {
@@ -38,19 +59,20 @@ const withBase = (path: string) => {
 <!doctype html>
 <html lang="en">
 	<head>
-		<BaseHead title={toTitle(tag)} description={SITE_DESCRIPTION} jsonLd={jsonLd} />
+		<BaseHead title={title} description={description} noIndex={posts.length < 2} jsonLd={jsonLd} />
 	</head>
 	<body>
 		<Header />
 		<main>
+			<p class="crumb"><a href={withBase('/tags/')}>Topics</a></p>
 			<h1>{toTitle(tag)}</h1>
-			<ul class="post-grid">
+			<ul class="post-list">
 				{posts.map((post) => (
 					<li>
 						<a href={withBase(`/blog/${post.id}/`)}>
-							<h3>{post.data.title}</h3>
+							<h2>{post.data.title}</h2>
 							<p>{post.data.description}</p>
-							<FormattedDate date={post.data.pubDate} />
+							<span class="date"><FormattedDate date={post.data.pubDate} /></span>
 						</a>
 					</li>
 				))}
@@ -61,22 +83,57 @@ const withBase = (path: string) => {
 </html>
 
 <style>
-	.post-grid {
-		list-style: none;
-		margin: 1.5rem 0 0;
-		padding: 0;
-		display: grid;
-		gap: 1.5rem;
+	.crumb {
+		margin: 0;
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
 	}
-	.post-grid a {
+
+	.crumb a {
+		color: var(--silver-dim);
+		text-decoration: none;
+	}
+
+	.crumb a:hover {
+		color: var(--accent);
+	}
+
+	.post-list {
+		list-style: none;
+		margin: 2rem 0 0;
+		padding: 0;
+	}
+
+	.post-list li {
+		border-top: 1px solid var(--border-subtle);
+	}
+
+	.post-list a {
 		display: block;
-		border: 1px solid rgb(var(--gray-light));
-		border-radius: 16px;
-		padding: 1rem 1.25rem;
+		padding: 1.5rem 0;
 		text-decoration: none;
 		color: inherit;
 	}
-	.post-grid a:hover {
-		box-shadow: var(--box-shadow);
+
+	.post-list h2 {
+		margin: 0 0 0.5rem;
+		font-size: 1.35rem;
+		color: var(--text-main);
+		transition: color 0.15s;
+	}
+
+	.post-list a:hover h2 {
+		color: var(--accent);
+	}
+
+	.post-list p {
+		margin: 0 0 0.75rem;
+		color: var(--text-muted);
+	}
+
+	.date {
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		color: var(--silver-dim);
 	}
 </style>

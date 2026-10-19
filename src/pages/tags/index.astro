@@ -1,0 +1,86 @@
+---
+import { getCollection } from 'astro:content';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { siteConfig } from '../../config/site';
+import { buildBreadcrumbJsonLd } from '../../utils/jsonLd';
+import { countTags, sortPosts } from '../../utils/posts';
+import { toSlug, toTitle } from '../../utils/tags';
+
+const posts = sortPosts(await getCollection('blog'));
+const tags = countTags(posts);
+const description = `Every topic on OpenDoors, from reverse engineering and malware analysis to AI security and backend engineering, with ${posts.length} writeups by ${siteConfig.author.name}.`;
+const jsonLd = buildBreadcrumbJsonLd([
+	{ name: 'Home', url: Astro.site?.toString() ?? siteConfig.site },
+	{ name: 'Topics', url: new URL('/tags/', Astro.site ?? siteConfig.site).toString() },
+]);
+
+const basePath = import.meta.env.BASE_URL;
+const withBase = (path: string) => {
+	const normalized = path.replace(/^\//, '');
+	return basePath.endsWith('/') ? `${basePath}${normalized}` : `${basePath}/${normalized}`;
+};
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title="Topics" description={description} jsonLd={jsonLd} />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<h1>Topics</h1>
+			<ul class="topic-list">
+				{tags.map(({ tag, count }) => (
+					<li>
+						<a href={withBase(`/tags/${toSlug(tag)}/`)}>
+							<span class="topic-name">{toTitle(tag)}</span>
+							<span class="topic-count">{count} {count === 1 ? 'post' : 'posts'}</span>
+						</a>
+					</li>
+				))}
+			</ul>
+		</main>
+		<Footer />
+	</body>
+</html>
+
+<style>
+	.topic-list {
+		list-style: none;
+		padding: 0;
+		margin: 2rem 0 0;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+		column-gap: 2.5rem;
+	}
+
+	.topic-list li {
+		border-bottom: 1px solid var(--border-subtle);
+	}
+
+	.topic-list a {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 1rem;
+		padding: 0.7rem 0;
+		text-decoration: none;
+		color: var(--text-main);
+		transition: color 0.15s;
+	}
+
+	.topic-count {
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		color: var(--silver-dim);
+		white-space: nowrap;
+	}
+
+	.topic-list a:hover,
+	.topic-list a:focus-visible {
+		color: var(--accent);
+	}
+</style>

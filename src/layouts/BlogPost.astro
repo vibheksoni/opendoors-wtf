@@ -7,29 +7,29 @@ import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
 import { siteConfig } from '../config/site';
 import { buildBlogPostingJsonLd, buildBreadcrumbJsonLd } from '../utils/jsonLd';
-import { toTitle } from '../utils/tags';
+import { toSlug, toTitle } from '../utils/tags';
+import authorPhoto from '../assets/vibhek-soni.jpg';
 
-type Props = CollectionEntry<'blog'>['data'];
+type Props = CollectionEntry<'blog'>['data'] & { wordCount?: number; markdownUrl?: string };
 
-const { title, description, pubDate, updatedDate, heroImage, tags, canonical } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, tags, canonical, wordCount, markdownUrl } = Astro.props;
 const pageUrl = new URL(Astro.url.pathname, Astro.site).toString();
-const heroUrl = heroImage ? new URL(heroImage.src, Astro.url).toString() : undefined;
+const heroUrl = new URL(heroImage ? heroImage.src : siteConfig.defaults.ogImage, Astro.site).toString();
 const breadcrumb = buildBreadcrumbJsonLd([
 	{ name: 'Home', url: Astro.site?.toString() ?? siteConfig.site },
 	{ name: 'Blog', url: new URL('/blog/', Astro.site ?? siteConfig.site).toString() },
 	{ name: title, url: pageUrl },
 ]);
 const blogJsonLd = buildBlogPostingJsonLd({
-	siteUrl: siteConfig.site,
 	title,
 	description,
 	url: pageUrl,
 	image: heroUrl,
 	datePublished: pubDate.toISOString(),
 	dateModified: updatedDate?.toISOString(),
-	authorName: siteConfig.author.name,
-	authorUrl: siteConfig.author.url,
 	keywords: tags,
+	wordCount,
+	markdownUrl,
 });
 
 const basePath = import.meta.env.BASE_URL;
@@ -41,7 +41,18 @@ const withBase = (path: string) => {
 
 <html lang="en">
 	<head>
-		<BaseHead title={title} description={description} image={heroImage} ogType="article" canonical={canonical} jsonLd={[breadcrumb, blogJsonLd]} />
+		<BaseHead
+			title={title}
+			description={description}
+			image={heroImage}
+			ogType="article"
+			canonical={canonical}
+			publishedTime={pubDate}
+			modifiedTime={updatedDate}
+			tags={tags}
+			markdownUrl={markdownUrl}
+			jsonLd={[breadcrumb, blogJsonLd]}
+		/>
 		<style>
 			main {
 				width: 100%;
@@ -92,49 +103,77 @@ const withBase = (path: string) => {
 			.tag-list {
 				display: flex;
 				flex-wrap: wrap;
-				gap: 0.5rem;
+				gap: 0.4rem 1.25rem;
 				justify-content: center;
-				margin: 1.5rem 0 0;
+				margin: 1.25rem 0 0;
 				padding: 0;
 				list-style: none;
+				font-family: var(--font-mono);
+				font-size: 0.8rem;
 			}
 			.tag-list a {
-				background: rgba(255, 255, 255, 0.05);
-				border: 1px solid var(--border-subtle);
-				border-radius: 999px;
-				color: var(--text-muted);
-				display: inline-flex;
-				font-size: 0.85rem;
-				padding: 0.35rem 0.85rem;
+				color: var(--silver-dim);
 				text-decoration: none;
-				transition: all 0.2s;
+			}
+			.tag-list a::before {
+				content: '#';
+				color: var(--accent);
+				margin-right: 0.15rem;
 			}
 			.tag-list a:hover {
-				color: #fff;
-				background: rgba(255, 255, 255, 0.1);
-				border-color: var(--accent);
-			}
-			.coffee-cta-article {
-				margin-top: 4rem;
-				padding: 1.5rem;
-				background: rgba(255, 255, 255, 0.03);
-				border: 1px solid var(--border-subtle);
-				border-radius: 8px;
-				text-align: center;
-			}
-			.coffee-cta-article p {
-				margin: 0;
-				color: var(--text-muted);
-			}
-			.coffee-cta-article a {
 				color: var(--accent);
+			}
+			.author-box {
+				display: flex;
+				gap: 1.25rem;
+				align-items: flex-start;
+				margin-top: 4rem;
+				padding-top: 2rem;
+				border-top: 1px solid var(--border-subtle);
+			}
+			.author-photo {
+				width: 64px;
+				height: 64px;
+				border-radius: 50%;
+				object-fit: cover;
+				object-position: 50% 30%;
+				flex-shrink: 0;
+			}
+			.author-box p {
+				margin: 0 0 0.5rem;
+			}
+			.author-name {
+				color: var(--text-main);
 				font-weight: 600;
 			}
-			.agency-cta-article {
-				margin-top: 0.75rem !important;
-				padding-top: 0.75rem;
-				border-top: 1px solid var(--border-subtle);
+			.author-name a {
+				color: var(--text-main);
+			}
+			.author-bio {
+				color: var(--text-muted);
 				font-size: 0.95rem;
+			}
+			.author-links {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.25rem 1rem;
+				font-family: var(--font-mono);
+				font-size: 0.8rem;
+			}
+			.author-links a {
+				color: var(--silver-dim);
+				text-decoration: none;
+			}
+			.author-links a:hover,
+			.support a:hover {
+				color: var(--accent);
+			}
+			.support {
+				font-size: 0.9rem;
+				color: var(--text-muted);
+			}
+			.support a {
+				color: var(--accent);
 			}
 		</style>
 	</head>
@@ -163,7 +202,7 @@ const withBase = (path: string) => {
 							<ul class="tag-list">
 								{tags.map((tag) => (
 									<li>
-										<a href={withBase(`/tags/${tag}/`)}>{toTitle(tag)}</a>
+										<a href={withBase(`/tags/${toSlug(tag)}/`)}>{toTitle(tag)}</a>
 									</li>
 								))}
 							</ul>
@@ -171,10 +210,21 @@ const withBase = (path: string) => {
 						<hr />
 					</header>
 					<slot />
-					<div class="coffee-cta-article">
-						<p>Enjoyed this post? <a href={siteConfig.socials.buymeacoffee} target="_blank">Buy me a coffee ☕</a> to support my work.</p>
-						<p class="agency-cta-article">Need a project done? <a href={siteConfig.socials.devagency} target="_blank">Hire DevHive Studios 🐝</a></p>
-					</div>
+					<aside class="author-box" aria-label="About the author">
+						<Image src={authorPhoto} alt="Vibhek Soni" width={128} height={128} class="author-photo" />
+						<div>
+							<p class="author-name">Written by <a href={siteConfig.author.url} rel="author">{siteConfig.author.name}</a></p>
+							<p class="author-bio">{siteConfig.author.bio}</p>
+							<p class="author-links">
+								<a href={siteConfig.socials.github} rel="me noreferrer" target="_blank">GitHub</a>
+								<a href={siteConfig.socials.x} rel="me noreferrer" target="_blank">X</a>
+								<a href={siteConfig.socials.linkedin} rel="me noreferrer" target="_blank">LinkedIn</a>
+								<a href={`mailto:${siteConfig.author.email}`}>Email</a>
+								{markdownUrl && <a href={markdownUrl}>Read as Markdown</a>}
+							</p>
+							<p class="support">If this helped you, you can <a href={siteConfig.socials.buymeacoffee} target="_blank" rel="noreferrer">buy me a coffee</a>, or <a href={siteConfig.socials.devagency} target="_blank" rel="noreferrer">work with me through DevHive Studios</a>.</p>
+						</div>
+					</aside>
 				</div>
 			</article>
 		</main>

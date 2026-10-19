@@ -1,5 +1,58 @@
+# OpenDoors, the blog of Vibhek Soni (https://vibheksoni.com/)
+# Search engines and AI assistants are welcome to read and cite everything here.
+
 User-agent: *
 Allow: /
 
-# Sitemap
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: DuckAssistBot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+# LLM-readable summary: https://opendoors.wtf/llms.txt
+# Full text of every post: https://opendoors.wtf/llms-full.txt
+
 Sitemap: https://opendoors.wtf/sitemap-index.xml

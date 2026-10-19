@@ -1,54 +1,138 @@
 ---
+import { Image } from 'astro:assets';
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 import { siteConfig } from '../config/site';
-import { buildBreadcrumbJsonLd, buildOrganizationJsonLd } from '../utils/jsonLd';
+import { buildBreadcrumbJsonLd, buildProfilePageJsonLd } from '../utils/jsonLd';
+import photo from '../assets/vibhek-soni.jpg';
+
+const pageUrl = new URL('/about/', Astro.site ?? siteConfig.site).toString();
+const description =
+	'About Vibhek Soni, a backend engineer in New York who writes OpenDoors, with notes on reverse engineering, security research and the tools he builds.';
 ---
 
 <!doctype html>
 <html lang="en">
 	<head>
 		<BaseHead
-			title="About"
-			description={SITE_DESCRIPTION}
+			title="About Vibhek Soni"
+			description={description}
+			ogType="profile"
 			jsonLd={[
 				buildBreadcrumbJsonLd([
 					{ name: 'Home', url: Astro.site?.toString() ?? siteConfig.site },
-					{ name: 'About', url: new URL('/about/', Astro.site ?? siteConfig.site).toString() },
+					{ name: 'About', url: pageUrl },
 				]),
-				buildOrganizationJsonLd(siteConfig.author.url, siteConfig.author.name, [
-					siteConfig.socials.github,
-					siteConfig.socials.linkedin,
-					siteConfig.socials.x,
-					siteConfig.socials.youtube,
-					siteConfig.socials.instagram,
-					siteConfig.socials.deepwiki,
-					siteConfig.socials.gravatar,
-					siteConfig.socials.buymeacoffee,
-					siteConfig.site,
-				]),
+				buildProfilePageJsonLd(pageUrl),
 			]}
 		/>
 	</head>
 	<body>
 		<Header />
 		<main>
-			<h1>About</h1>
+			<div class="about-head">
+				<Image src={photo} alt="Vibhek Soni" width={240} height={240} class="photo" loading="eager" />
+				<div>
+					<h1>Vibhek Soni</h1>
+					<p class="handle">vibheksoni · @ImVibhek · New York</p>
+				</div>
+			</div>
+
 			<p>
-				OpenDoors is my logbook for security research, backend engineering, and the production lessons
-				that surface while building real systems. I focus on responsible disclosure, defensive design,
-				and clear explanations that hold up under scrutiny.
+				I'm a backend engineer in New York. I build API infrastructure and security tools, usually by
+				taking a protocol apart first and building on what I learn.
 			</p>
+
 			<p>
-				I publish case studies, tooling breakdowns, and security notes with an emphasis on how to prevent
-				abuse and ship resilient infrastructure. Expect practical writeups, not fluff.
+				OpenDoors is where I write that work up. Some posts take apart how a piece of software actually
+				works like Bun executables or a Rust infostealer. Others cover AI servers and agent tools that
+				end up open to the internet and what it takes to lock them down.
 			</p>
+
+			<h2>What I've built</h2>
+			<ul class="projects">
+				{siteConfig.projects.map((project) => (
+					<li>
+						<a href={project.url} target="_blank" rel="noreferrer">{project.name}</a>
+						<span>{project.blurb}</span>
+					</li>
+				))}
+			</ul>
+
+			<h2>Contact</h2>
 			<p>
-				Connect with me on GitHub, X, and YouTube for updates and deeper walkthroughs.
+				Email me at <a href={`mailto:${siteConfig.author.email}`}>{siteConfig.author.email}</a>. My
+				portfolio is at <a href={siteConfig.author.url} rel="me">vibheksoni.com</a> and my code is on
+				<a href={siteConfig.socials.github} rel="me noreferrer" target="_blank">GitHub</a>. I also post on
+				<a href={siteConfig.socials.x} rel="me noreferrer" target="_blank">X</a> and
+				<a href={siteConfig.socials.linkedin} rel="me noreferrer" target="_blank">LinkedIn</a>.
 			</p>
 		</main>
 		<Footer />
 	</body>
 </html>
+
+<style>
+	.about-head {
+		display: flex;
+		align-items: center;
+		gap: 1.75rem;
+		margin-bottom: 2rem;
+	}
+
+	.about-head h1 {
+		margin: 0;
+	}
+
+	.photo {
+		width: 120px;
+		height: 120px;
+		border-radius: 50%;
+		object-fit: cover;
+		object-position: 50% 30%;
+		border: 1px solid var(--border-hover);
+		flex-shrink: 0;
+	}
+
+	.handle {
+		margin: 0.4rem 0 0;
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
+		color: var(--silver-dim);
+	}
+
+	.projects {
+		list-style: none;
+		padding: 0;
+		margin: 1rem 0 2rem;
+	}
+
+	.projects li {
+		padding: 0.75rem 0;
+		border-bottom: 1px solid var(--border-subtle);
+	}
+
+	.projects a {
+		color: var(--text-main);
+		font-weight: 600;
+		text-decoration: none;
+	}
+
+	.projects a:hover {
+		color: var(--accent);
+	}
+
+	.projects span {
+		display: block;
+		color: var(--text-muted);
+		font-size: 0.95rem;
+	}
+
+	@media (max-width: 520px) {
+		.about-head {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+	}
+</style>

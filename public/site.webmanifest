@@ -1,6 +1,9 @@
 {
-	"name": "OpenDoors",
+	"name": "OpenDoors by Vibhek Soni",
 	"short_name": "OpenDoors",
+	"description": "Security research and backend engineering notes by Vibhek Soni.",
+	"start_url": "/",
+	"lang": "en",
 	"icons": [
 		{
 			"src": "/android-chrome-192x192.png",
@@ -13,7 +16,7 @@
 			"type": "image/png"
 		}
 	],
-	"theme_color": "#ffffff",
-	"background_color": "#ffffff",
+	"theme_color": "#050505",
+	"background_color": "#050505",
 	"display": "standalone"
 }
