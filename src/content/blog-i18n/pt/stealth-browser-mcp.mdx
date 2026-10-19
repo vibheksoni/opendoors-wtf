@@ -1,0 +1,119 @@
+---
+title: "Como eu construí o stealth-browser-mcp"
+description: "Por que construí o stealth-browser-mcp, como ele entrega um Chrome real para agentes de IA via MCP e CDP e o benchmark que me mantém honesto sobre o que ele faz."
+pubDate: 2026-10-18
+tags:
+  - browser automation
+  - mcp
+  - ai agents
+  - python
+  - chrome devtools protocol
+lang: pt
+source: stealth-browser-mcp
+---
+import { Image } from 'astro:assets';
+import architecture from '../../../assets/diagrams/stealth-browser-architecture.svg';
+import heroClone from '../../../assets/stealth-browser/augment-hero-clone.png';
+
+## Por que eu construí
+
+Em agosto de 2025 meus agentes de IA viviam travando toda vez que tentavam navegar com o Playwright. Uma página abria normal no meu Chrome e a mesma página entregava ao agente uma casca vazia. Eu queria que meus agentes navegassem mais como eu então construí minha própria solução e coloquei no [GitHub](https://github.com/vibheksoni/stealth-browser-mcp) como stealth-browser-mcp.
+
+A ideia era simples. Em vez de um navegador de teste que se anuncia sozinho eu queria que meu agente conduzisse um Chrome real e visse o que eu vejo no DevTools enquanto faz isso.
+
+Achei que algumas pessoas teriam o mesmo problema. Hoje tem perto de 3.000 estrelas e 390 forks e 9 pessoas que eu nunca conheci tiveram pull requests aceitos nele. Este post conta como funciona e o que aprendi construindo.
+
+<Image src={architecture} alt="Diagrama de um agente de IA conversando com o servidor FastMCP do stealth-browser-mcp por stdio JSON-RPC, que conduz um Chrome real por CDP, com os módulos de stdout guard, entrada confiável, ferramentas de rede e clonagem de elementos embaixo" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+## Como as peças se encaixam
+
+O stealth-browser-mcp é um servidor MCP escrito em Python sobre o [FastMCP](https://github.com/jlowin/fastmcp). Seu agente fala com ele de qualquer cliente MCP como Claude Code, Cursor ou Codex. O servidor conduz um Chrome, Edge ou Chromium real através do [nodriver](https://github.com/ultrafunkamsterdam/nodriver) e do Chrome DevTools Protocol.
+
+Essa divisão é o desenho inteiro. O nodriver abre um navegador normal como um usuário abriria e me dá uma conexão CDP com ele. Todo o resto que eu preciso vive nessa conexão então o servidor é basicamente um conjunto de ferramentas cuidadosas em cima dela.
+
+O MCP é o que torna isso usável por um agente. Cada coisa que o navegador faz é uma ferramenta com um nome que o modelo escolhe e o modelo recebe um resultado de texto normal. O agente nunca precisa escrever código de Playwright nem cuidar do ciclo de vida do navegador porque o servidor cuida de tudo isso.
+
+## A parte que ninguém vê
+
+No começo do projeto as ferramentas funcionavam e de repente o cliente derrubava a conexão sem erro nenhum que eu pudesse ver.
+
+O bug era o `print()`. No transporte stdio o descritor de arquivo 1 é o canal JSON-RPC. Qualquer `print()` do meu código ou de uma dependência cai no meio de um quadro JSON-RPC e o cliente derruba a conexão para se proteger. O nodriver também imprime então não bastava limpar meus próprios arquivos.
+
+A correção é uma proteção pequena em `stdio_guard.py` que eu instalo logo antes de subir o transporte. Ela troca `sys.stdout` por um proxy que manda as escritas de Python para stderr. O transporte continua funcionando porque ele envolveu o buffer real de stdout antes da troca e nunca mais olha para `sys.stdout`.
+
+Esse arquivo é o motivo de o log de depuração continuar funcionando normal. Você põe `STEALTH_BROWSER_DEBUG=1` e tem logs detalhados em stderr com o protocolo intacto.
+
+## Entrada confiável
+
+Muita automação clica chamando `element.click()` de JavaScript. Isso funciona até a página checar se o clique veio de uma mão de verdade. Eu queria que os eventos de entrada parecessem entrada.
+
+O `input_actions.py` manda eventos de entrada CDP de verdade. Um clique resolve o nó, rola até ele na tela e espera a posição parar de mudar para então despachar `mousePressed` e `mouseReleased` com coordenadas reais. O mouse anda por um caminho curto com suavização e um pouco de ruído em vez de teletransportar até o alvo e a última posição fica guardada por aba para o próximo movimento começar de onde o cursor realmente está.
+
+Digitar funciona igual. Cada caractere é mapeado nos campos de teclado que um layout US produziria e sai como evento de tecla real. Limpar um campo seleciona o conteúdo e apaga como uma pessoa faria em vez de colocar `value` vazio e disparar um evento falso.
+
+Esse detalhe importa mais do que parece. O benchmark semanal tem uma checagem chamada fidelidade de entrada e ela falha se o clique e a digitação não produzirem eventos confiáveis em ordem real sem nada injetado na página.
+
+## O que as ferramentas fazem
+
+O servidor traz 101 ferramentas em 11 seções e você pode rodar uma superfície menor quando não precisa de todas.
+
+| Modo | Ferramentas | Quando usar |
+|---|---|---|
+| Completo | 101 | Tudo abaixo |
+| `--minimal` | 21 | Navegar, clicar e ler páginas |
+| `--disable-*` | o que você quiser | Tirar uma seção como os hooks |
+| `--xpool-safe` | 84 | Remover as ferramentas que disparam `Runtime.enable` |
+
+O `--list-sections` imprime as seções e os tamanhos para você montar seu subconjunto. O motivo das seções é contexto. Cada ferramenta exposta custa tokens no prompt do agente e um modelo com 101 opções escolhe a errada mais vezes do que um com 21.
+
+### Inspeção de rede
+
+Um agente consegue listar as requisições que a página fez e ler cabeçalhos, payload e corpo capturado. É a ferramenta que eu mais uso quando estou olhando como a API de um site funciona porque o agente acompanha uma requisição da página até a resposta e responde perguntas sobre ela sem eu abrir o DevTools.
+
+### Hooks dinâmicos
+
+Hooks são funções pequenas de Python que o agente escreve em tempo de execução e que olham cada requisição para bloquear, redirecionar, trocar a resposta ou deixar passar. Um agente que percebe uma chamada de analytics muito falante escreve um hook que a remove e lê a página sem o barulho.
+
+Existem limites de propósito. O código do hook roda com uma lista branca de builtins com `len`, `str`, `any` e `all` então nada num hook consegue ler arquivo nem fazer chamada de rede própria. Um validador analisa cada função e rejeita `eval`, `exec`, `open` e `input` antes de qualquer coisa rodar.
+
+### Clonagem de elementos
+
+Dado um seletor CSS o servidor puxa o elemento com estilos computados, estrutura DOM, recursos e animações. Isso basta para reconstruir uma seção em outro site com a tipografia e o espaçamento reais em vez de uma aproximação.
+
+O clone do hero do [Augment Code](https://www.augmentcode.com/) é a melhor demonstração. Tudo foi uma mensagem para o Claude abrir um navegador, ir no site e clonar o hero. Ele extraiu o elemento e voltou com uma recriação funcional e responsiva em uns dois minutos.
+
+<Image src={heroClone} alt="Captura do hero do Augment Code recriado como clone, com o título, o layout e os estilos originais reproduzidos em HTML" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+### Bindings de página
+
+Os bindings de página são o conector que vai para o outro lado. A página recebe `window.<nome>(...)` e cada chamada devolve uma promessa que entra na fila para o agente. O agente lê as chamadas com `get_page_binding_calls` e responde com `resolve_page_binding_call`.
+
+Nada da página nem do agente roda no host do servidor. Os argumentos precisam ser JSON e tanto o tamanho da fila quanto o do payload são limitados para uma página não conseguir estourar a memória chamando um binding num laço.
+
+## Onde eu errei sobre stealth
+
+Meu primeiro README fazia o stealth parecer um problema resolvido. Não é e eu mudei como falo disso.
+
+O repositório roda um benchmark toda semana no GitHub Actions em Linux, macOS e Windows tanto headless quanto com janela com o Chrome atual e o anterior. Ele checa flags de lançamento, uma sonda local de fingerprint, injeção de script, fidelidade de entrada, Sannysoft, Intoli, CreepJS, um desafio JS do Cloudflare e o fingerprint de TLS e HTTP/2. Cada rodada escreve JSON em `docs/stealth-results/` e a tabela do README é gerada a partir desses arquivos em vez de escrita à mão.
+
+A rodada mais recente é honesta de um jeito mais útil que uma promessa. macOS e Windows passam em tudo. Os runners de Linux passam 7, degradam em 1 e falham 1 porque os runners Linux do GitHub não têm GPU então o Chrome renderiza WebGL com renderizador de software e o Sannysoft marca isso. Numa máquina com GPU de verdade isso não aparece.
+
+Quando um alvo que passava piora o workflow abre uma issue `stealth-regression` sozinho. Essa é a parte que mais me importa. A detecção muda todo mês então um número num README é uma medição de uma data. Não diz nada sobre hoje.
+
+## O modelo de confiança
+
+Este servidor é potente de um jeito fácil de esquecer. Ele executa JavaScript numa página, lê cookies e armazenamento, intercepta e reescreve tráfego de rede, executa comandos CDP e sobe arquivos de pastas permitidas.
+
+Então o modelo de confiança está escrito. O agente ou o cliente MCP é o principal de segurança. A configuração recomendada é stdio local com um cliente em que você confia. Se você rodar o transporte HTTP defina `STEALTH_BROWSER_MCP_AUTH_TOKEN` e não exponha na internet aberta.
+
+Upload de arquivos só lê das pastas em `BROWSER_FILE_UPLOAD_ALLOWED_DIRS`. Não tem como contornar essa checagem porque a ferramenta resolve o caminho real e compara com as raízes permitidas antes de tocar no arquivo.
+
+## O que aprendi
+
+O bug que mais me ensinou foi o do stdout. Uma ferramenta que funciona 90 por cento do tempo é pior que uma que falha alto porque você gasta os 10 por cento restantes duvidando do seu próprio código. Quando a proteção entrou cada falha passou a ser uma falha de verdade.
+
+A segunda lição foi sobre honestidade num README. Dizer que um navegador passa em todos os detectores teria dado mais estrelas por uma semana e me custado todo motivo para alguém confiar no projeto. Um benchmark que pode falhar em público é o único que vale publicar.
+
+A terceira é que as pessoas usam o que você constrói se o problema for real. Meu problema era agentes travando e 390 forks depois descobri que muita gente tinha o mesmo.
+
+O repositório está em [github.com/vibheksoni/stealth-browser-mcp](https://github.com/vibheksoni/stealth-browser-mcp). Use em sites que você tem permissão para automatizar e confira os termos do site para onde está apontando.

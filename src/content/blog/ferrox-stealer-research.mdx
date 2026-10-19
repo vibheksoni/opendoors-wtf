@@ -1,6 +1,6 @@
 ---
 title: "Ferrox: Dissecting a Modern Rust-Based Infostealer"
-description: "A deep technical analysis of Ferrox — a Windows stealer written in Rust featuring Hell's Gate syscalls, polymorphic builds, Chrome App-Bound Encryption bypass, and advanced anti-analysis techniques. Research conducted in isolated VM environment."
+description: "A deep technical analysis of Ferrox. A Windows stealer written in Rust featuring Hell's Gate syscalls, polymorphic builds, Chrome App-Bound Encryption bypass and advanced anti-analysis techniques. Research conducted in isolated VM environment."
 pubDate: 2026-02-26
 tags:
   - malware analysis
@@ -11,40 +11,40 @@ tags:
 
 ## Research Context
 
-This analysis documents the Ferrox infostealer project — a Windows-targeted credential harvester I built for security research and educational purposes. All testing was conducted in isolated virtual machine environments against Windows Defender only.
+This analysis documents the Ferrox infostealer project. A Windows-targeted credential harvester I built for security research and educational purposes. All testing was conducted in isolated virtual machine environments against Windows Defender only.
 
-**This is a research project.** The goal was to understand modern stealer techniques, explore how Rust can be weaponized for offensive tooling, and demonstrate the current state of AV evasion. Critical components have been intentionally removed from the public codebase.
+**This is a research project.** The goal was to understand modern stealer techniques, explore how Rust can be weaponized for offensive tooling and demonstrate the current state of AV evasion. Critical components have been intentionally removed from the public codebase.
 
 The full (redacted) source is available at [github.com/vibheksoni/ferrox](https://github.com/vibheksoni/ferrox).
 
 ## Why This Matters
 
-Infostealers are one of the most prevalent malware categories today. They're sold as malware-as-a-service, used in initial access operations, and responsible for massive credential leaks. Understanding how they work — from the evasion techniques to the data exfiltration methods — is essential for building better defenses.
+Infostealers are one of the most prevalent malware categories today. They're sold as malware-as-a-service, used in initial access operations and responsible for massive credential leaks. Understanding how they work. From the evasion techniques to the data exfiltration methods. Is essential for building better defenses.
 
-Most modern stealers are written in Go or C++. Ferrox is written in Rust, which is unusual but increasingly relevant as offensive tooling diversifies. The project demonstrates:
+Most modern stealers are written in Go or C++. Ferrox is written in Rust which is unusual but increasingly relevant as offensive tooling diversifies. The project demonstrates:
 
 - **Hell's Gate syscalls** for EDR bypass
 - **Polymorphic code generation** producing unique binaries per build
 - **Compile-time string encryption** with AES-256-GCM
 - **Chrome App-Bound Encryption bypass** for credential theft
 - **Process injection** into SYSTEM processes to disable Defender
-- **Anti-VM, anti-debugger, and sandbox evasion** techniques
+- **Anti-VM, anti-debugger and sandbox evasion** techniques
 
-This post breaks down each technique, explains the implementation, and discusses detection strategies.
+This post breaks down each technique, explains the implementation and discusses detection strategies.
 
 ## Execution Pipeline
 
 Ferrox runs silently (no console window via `#![windows_subsystem = "windows"]`) and follows a structured execution flow:
 
-1. **Single instance check** — Creates a global mutex to prevent multiple instances
-2. **Anti-analysis checks** — VM detection, debugger detection, sandbox evasion
-3. **Legitimate traffic generation** — Blends in with normal network activity
-4. **Device fingerprinting** — Generates unique device ID from hardware serials
-5. **System reconnaissance** — Collects IP, WiFi passwords, Windows key, installed AV
-6. **Data harvesting** — Extracts credentials from browsers, wallets, apps, games
-7. **Compression and encryption** — ChaCha20 encryption of stolen data
-8. **Exfiltration** — Uploads encrypted blob to Telegram Bot API
-9. **Cleanup and self-deletion** — Removes traces and exits
+1. **Single instance check.** Creates a global mutex to prevent multiple instances
+2. **Anti-analysis checks.** VM detection, debugger detection, sandbox evasion
+3. **Legitimate traffic generation.** Blends in with normal network activity
+4. **Device fingerprinting.** Generates unique device ID from hardware serials
+5. **System reconnaissance.** Collects IP, WiFi passwords, Windows key, installed AV
+6. **Data harvesting.** Extracts credentials from browsers, wallets, apps, games
+7. **Compression and encryption.** ChaCha20 encryption of stolen data
+8. **Exfiltration.** Uploads encrypted blob to Telegram Bot API
+9. **Cleanup and self-deletion.** Removes traces and exits
 
 If any anti-analysis check fails, the malware silently exits or self-corrupts to avoid detection.
 
@@ -54,11 +54,11 @@ If any anti-analysis check fails, the malware silently exits or self-corrupts to
 
 All Chromium-based browsers (Chrome, Edge, Brave, Opera, Vivaldi) and Gecko-based browsers (Firefox, Waterfox, Pale Moon). Extracts:
 
-- **Saved passwords** — Including Chrome App-Bound Encryption decryption (credit: [xaitax/Chrome-App-Bound-Encryption-Decryption](https://github.com/xaitax/Chrome-App-Bound-Encryption-Decryption))
-- **Cookies** — Session tokens for account takeover
-- **Autofill data** — Names, addresses, phone numbers
-- **Credit cards** — Encrypted card data
-- **Browser extensions** — Crypto wallet extensions targeted specifically
+- **Saved passwords.** Including Chrome App-Bound Encryption decryption (credit: [xaitax/Chrome-App-Bound-Encryption-Decryption](https://github.com/xaitax/Chrome-App-Bound-Encryption-Decryption))
+- **Cookies.** Session tokens for account takeover
+- **Autofill data.** Names, addresses, phone numbers
+- **Credit cards.** Encrypted card data
+- **Browser extensions.** Crypto wallet extensions targeted specifically
 
 ### Cryptocurrency Wallets
 
@@ -106,11 +106,11 @@ pub fn cpuid_vm_check() -> bool {
 ```
 
 **Detection methods:**
-- **CPUID hypervisor bit** — Checks ECX bit 31 and brand string matching (VMware, KVM, VirtualBox, Hyper-V, QEMU, Xen)
-- **MAC address prefixes** — Matches against known VM vendor OUIs
-- **WMI hardware queries** — BIOS manufacturer, computer model, disk model
-- **Registry artifacts** — VM-specific registry keys
-- **Process scanning** — Looks for vmtoolsd, vboxservice, qemu-ga, etc.
+- **CPUID hypervisor bit.** Checks ECX bit 31 and brand string matching (VMware, KVM, VirtualBox, Hyper-V, QEMU, Xen)
+- **MAC address prefixes.** Matches against known VM vendor OUIs
+- **WMI hardware queries.** BIOS manufacturer, computer model, disk model
+- **Registry artifacts.** VM-specific registry keys
+- **Process scanning.** Looks for vmtoolsd, vboxservice, qemu-ga, etc.
 
 ### Anti-Debugger
 
@@ -141,22 +141,22 @@ pub fn timing_check() -> bool {
 }
 ```
 
-- **PEB `IsDebuggerPresent`** — Resolved via hashed API to avoid import table detection
-- **RDTSC timing check** — Measures CPU cycles for trivial operations; single-stepping causes massive cycle count increases
+- **PEB `IsDebuggerPresent`.** Resolved via hashed API to avoid import table detection
+- **RDTSC timing check.** Measures CPU cycles for trivial operations; single-stepping causes massive cycle count increases
 
 ### Sandbox Evasion
 
 Multiple techniques detect automated analysis environments:
 
-- **Suspicious parent processes** — Checks for python, wireshark, fiddler, procmon, x64dbg, ollydbg, ida
-- **Low resource detection** — RAM < 4GB, CPU < 2 cores
-- **Recent boot detection** — Uptime < 10 minutes
-- **Time acceleration detection** — Compares expected vs actual sleep duration to catch sandbox fast-forwarding
-- **Execution inflation** — Performs 15-30 rounds of legitimate-looking operations (reading system DLLs, registry queries, prime calculations) to waste sandbox analysis time
+- **Suspicious parent processes.** Checks for python, wireshark, fiddler, procmon, x64dbg, ollydbg, ida
+- **Low resource detection.** RAM < 4GB, CPU < 2 cores
+- **Recent boot detection.** Uptime < 10 minutes
+- **Time acceleration detection.** Compares expected vs actual sleep duration to catch sandbox fast-forwarding
+- **Execution inflation.** Performs 15-30 rounds of legitimate-looking operations (reading system DLLs, registry queries, prime calculations) to waste sandbox analysis time
 
 ## Hell's Gate: Direct Syscall Execution
 
-One of the most sophisticated evasion techniques in Ferrox is the implementation of Hell's Gate — a method for bypassing userland API hooks installed by EDR/AV products.
+One of the most sophisticated evasion techniques in Ferrox is the implementation of Hell's Gate. A method for bypassing userland API hooks installed by EDR/AV products.
 
 ### The Problem with Normal API Calls
 
@@ -166,16 +166,16 @@ When you call a Windows API function like `VirtualAlloc`, the call chain looks l
 Your Code → kernel32.dll!VirtualAlloc → ntdll.dll!NtAllocateVirtualMemory → syscall → kernel
 ```
 
-EDR products hook functions in `ntdll.dll` by modifying the first few bytes to redirect execution to their monitoring code. This allows them to inspect parameters, block malicious operations, and log activity.
+EDR products hook functions in `ntdll.dll` by modifying the first few bytes to redirect execution to their monitoring code. This allows them to inspect parameters, block malicious operations and log activity.
 
 ### The Hell's Gate Solution
 
 Hell's Gate bypasses these hooks by:
 
-1. **Locating NTDLL** — Walks the PEB (Process Environment Block) via `gs:[0x60]` to find ntdll.dll without calling any APIs
-2. **Parsing PE exports** — Manually parses the PE export table to find syscall functions
-3. **Extracting SSNs** — Reads the `mov eax, <SSN>` instruction from function prologues to extract System Service Numbers
-4. **Executing raw syscalls** — Uses inline assembly to execute `syscall` instructions directly
+1. **Locating NTDLL.** Walks the PEB (Process Environment Block) via `gs:[0x60]` to find ntdll.dll without calling any APIs
+2. **Parsing PE exports.** Manually parses the PE export table to find syscall functions
+3. **Extracting SSNs.** Reads the `mov eax, <SSN>` instruction from function prologues to extract System Service Numbers
+4. **Executing raw syscalls.** Uses inline assembly to execute `syscall` instructions directly
 
 The syscall numbers are cached in a global `OnceLock` singleton for performance. Resolved syscalls include:
 
@@ -201,12 +201,12 @@ To avoid suspicious import table entries, Ferrox uses API hashing with DJB2 algo
 
 Zero import table entries for sensitive APIs means static analysis tools can't see what functions the malware uses. The resolution process:
 
-1. **Walk PEB** — Access `gs:[0x60]` to get PEB, then walk `Ldr->InMemoryOrderModuleList` to find loaded modules
-2. **Parse PE exports** — For each module, parse the export table to enumerate function names
-3. **Hash and compare** — Hash each function name with DJB2 and compare against target hash
-4. **Return address** — When match found, return function address
+1. **Walk PEB.** Access `gs:[0x60]` to get PEB, then walk `Ldr->InMemoryOrderModuleList` to find loaded modules
+2. **Parse PE exports.** For each module, parse the export table to enumerate function names
+3. **Hash and compare.** Hash each function name with DJB2 and compare against target hash
+4. **Return address.** When match found, return function address
 
-The `api_hash!()` proc macro generates hashes at compile time, and `api_resolve!()` resolves at runtime. The hash key is randomized per build (1000-10000 range), making each binary unique.
+The `api_hash!()` proc macro generates hashes at compile time and `api_resolve!()` resolves at runtime. The hash key is randomized per build (1000-10000 range), making each binary unique.
 
 ## Compile-Time String Encryption
 
@@ -233,7 +233,7 @@ Every compilation produces a unique binary. The `polymorph.py` script mutates so
 - Generates unique DJB2 hash key for API hashing
 - Restores original source files after build completes
 
-**Marker system** — source files contain comment markers that the builder transforms:
+**Marker system.** source files contain comment markers that the builder transforms:
 
 ```rust
 //#ultraprotect(name="API_KEY", value="default_value")
@@ -298,11 +298,11 @@ All stolen data is exfiltrated over Telegram Bot API:
 
 Multiple techniques prevent forensic analysis:
 
-- **Self-deletion** — Spawns temp .bat file that loops killing the process and deleting the exe
-- **File overwriting** — Writes null bytes before deletion to prevent recovery
-- **Self-corruption on VM detection** — Spawns hidden PowerShell to overwrite exe with random bytes
-- **Handle manipulation** — Uses NtQuerySystemInformation to unlock own executable while running
-- **Volatile strings** — Memory zeroed on drop to prevent memory forensics
+- **Self-deletion.** Spawns temp .bat file that loops killing the process and deleting the exe
+- **File overwriting.** Writes null bytes before deletion to prevent recovery
+- **Self-corruption on VM detection.** Spawns hidden PowerShell to overwrite exe with random bytes
+- **Handle manipulation.** Uses NtQuerySystemInformation to unlock own executable while running
+- **Volatile strings.** Memory zeroed on drop to prevent memory forensics
 
 ## Detection Strategies
 
@@ -336,18 +336,18 @@ While Ferrox evades signature-based detection, behavioral analysis can still cat
 
 Most stealers are written in Go or C++. Rust is unusual but offers some advantages:
 
-- **Error handling** — The `Result` type forces explicit error handling, reducing crashes during execution
-- **Tooling** — `cargo` provides excellent dependency management and build system
-- **FFI** — Clean interop with Windows APIs and native libraries
-- **Performance** — Zero-cost abstractions and aggressive optimization
+- **Error handling.** The `Result` type forces explicit error handling, reducing crashes during execution
+- **Tooling.** `cargo` provides excellent dependency management and build system
+- **FFI.** Clean interop with Windows APIs and native libraries
+- **Performance.** Zero-cost abstractions and aggressive optimization
 
-The tradeoff is that most code is `unsafe` by nature when doing DMA operations, API hooking, and process injection. Memory safety isn't the selling point here - it's the developer experience and tooling.
+The tradeoff is that most code is `unsafe` by nature when doing DMA operations, API hooking and process injection. Memory safety isn't the selling point here - it's the developer experience and tooling.
 
 ## Conclusion
 
-Ferrox demonstrates the current state of infostealer sophistication. The combination of Hell's Gate syscalls, polymorphic builds, compile-time encryption, and anti-analysis techniques makes detection challenging for signature-based AV.
+Ferrox demonstrates the current state of infostealer sophistication. The combination of Hell's Gate syscalls, polymorphic builds, compile-time encryption and anti-analysis techniques makes detection challenging for signature-based AV.
 
-However, behavioral analysis remains effective. EDR products that monitor syscall patterns, credential access, and process behavior can still detect these techniques.
+However, behavioral analysis remains effective. EDR products that monitor syscall patterns, credential access and process behavior can still detect these techniques.
 
 **Key takeaways for defenders:**
 - Signature-based detection is insufficient against polymorphic malware

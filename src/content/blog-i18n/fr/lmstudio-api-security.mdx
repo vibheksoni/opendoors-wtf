@@ -1,7 +1,7 @@
 ---
-title: "Les risques cachés des serveurs LM Studio exposés"
-description: "Enquête sur la façon dont la fonction de serveur local de LM Studio peut exposer vos modèles d'IA sur l'internet public, et comment le sécuriser."
-pubDate: 2025-01-23
+title: "Le risque caché des serveurs LM Studio exposés"
+description: "Comment la fonction de serveur local de LM Studio peut exposer vos modèles d’IA sur internet et ce qu’il faut faire pour le fermer."
+pubDate: 2026-01-23
 tags:
   - api security
   - lmstudio
@@ -16,47 +16,50 @@ import step2Img from '../../../assets/lmstudio/Step2.png';
 
 ## Le problème
 
-LM Studio est une application puissante avec interface graphique qui rend l'exécution de LLM en local accessible à tout le monde. Elle inclut une fonction pratique : un **serveur local** qui fournit une API compatible OpenAI sur le port **1234**.
+LM Studio est une application avec interface graphique qui rend l’exécution de modèles locaux accessible. Elle fournit aussi un **serveur local** qui donne une API compatible OpenAI sur le port **1234**.
 
-Ce serveur permet d'utiliser vos modèles locaux avec d'autres applications ou de les partager sur votre réseau local. Cependant, comme beaucoup d'outils pour développeurs, il privilégie la facilité d'utilisation à la sécurité par défaut. Quand vous activez le serveur, surtout si vous cochez « Serve on Local Network » sans pare-feu correct, vous risquez d'ouvrir une porte sur tout internet.
+Ce serveur vous permet d’utiliser vos modèles depuis d’autres applications ou de les partager sur votre réseau. Comme beaucoup d’outils de développement il préfère la facilité à la sécurité. Vous activez le serveur et cochez "Serve on Local Network" sans pare-feu devant et vous venez d’ouvrir une porte vers internet.
 
 ## Ce qui peut mal tourner
 
-Le serveur de LM Studio n'impose aucune authentification par défaut. Si votre machine est directement connectée à internet ou si votre routeur redirige le port 1234, un attaquant peut :
+Le serveur de LM Studio ne demande aucune authentification par défaut. Si la machine est directement reliée à internet ou si votre routeur redirige le port 1234, un attaquant peut faire ceci.
 
-- **Interroger vos modèles :** utiliser vos ressources de calcul pour générer du texte ou du code.
-- **Faire grimper votre facture d'électricité :** une inférence continue sur votre GPU consomme beaucoup d'énergie.
-- **Accéder au contexte chargé :** si le modèle conserve du contexte de sessions précédentes (selon l'implémentation), des données sensibles pourraient théoriquement être exposées.
+- **Utiliser vos modèles.** Quelqu’un d’autre utilise votre GPU pour générer du texte ou du code.
+- **Vous coûter de l’argent.** De l’inférence continue sur une machine louée c’est une facture pour un travail que vous n’avez jamais demandé.
+- **Lire le contexte.** Si la session transporte une conversation précédente ce qu’elle contenait peut être lisible.
 
-## Comment j'ai trouvé ça
+## Comment je l’ai trouvé
 
-Je voulais voir si la philosophie de conception « facile à utiliser » avait conduit à des expositions accidentelles semblables à celles qu'on voit avec d'autres outils de développement. LM Studio possède dans son interface une option précise pour activer le serveur.
+Je voulais savoir si le design facile avait produit la même exposition accidentelle que je trouve sans arrêt dans d’autres outils. LM Studio a un seul interrupteur dans l’interface qui active le serveur.
 
-Je me suis tourné vers **FOFA**, un moteur de recherche du cyberespace, pour chercher des instances exposées.
+Je suis donc allé chercher avec **FOFA** qui est un moteur de recherche du cyberespace.
 
-J'ai recherché les machines qui exposent le port 1234 avec une signature propre à la réponse du serveur de LM Studio. La requête que j'ai utilisée était : `port="1234" && body="LM Studio"`.
+J’ai cherché les machines avec le port 1234 ouvert et une signature propre à la réponse du serveur de LM Studio. La requête était `port="1234" && body="LM Studio"`.
 
-<Image src={step1Img} alt="Requête de recherche FOFA.info montrant une recherche sur le port 1234 pour LM Studio" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={step1Img} alt="Requête FOFA.info sur le port 1234 de LM Studio" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
-Les résultats ont confirmé mes soupçons. J'ai trouvé **plus de 3 000 hôtes exposés** :
+J’ai trouvé **plus de 3 000 hôtes exposés**.
 
-<Image src={step2Img} alt="Résultats de recherche FOFA.info affichant plus de 3 000 instances LM Studio exposées" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={step2Img} alt="Résultats FOFA.info affichant plus de 3 000 instances LM Studio exposées" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
-Ce ne sont pas de simples serveurs vides ; ce sont des points d'accès d'API pleinement fonctionnels qui attendent des prompts.
+Ce ne sont pas des serveurs vides. Ce sont des points d’API qui répondent aux prompts.
 
 ## Comment protéger votre instance LM Studio
 
-Si vous utilisez la fonction serveur de LM Studio, suivez ces étapes pour rester en sécurité :
+Si vous utilisez la fonction serveur trois étapes vous gardent en sécurité.
 
-### 1. Écouter uniquement sur localhost
-À moins d'avoir besoin d'accéder à LM Studio depuis un autre appareil, assurez-vous que le serveur écoute sur `127.0.0.1` (localhost) plutôt que sur `0.0.0.0` (toutes les interfaces). Dans l'interface de LM Studio, vérifiez les paramètres de votre serveur.
+### 1. Attachez le serveur à localhost uniquement
 
-### 2. Utiliser un pare-feu
-Si vous devez absolument activer « Serve on Local Network », configurez le pare-feu de votre système (Windows Defender ou le pare-feu macOS) ou votre routeur pour bloquer le trafic entrant sur le port 1234 depuis l'internet public. N'autorisez les connexions que depuis des adresses IP locales de confiance.
+Sauf si un autre appareil doit l’atteindre, attachez le serveur à `127.0.0.1` au lieu de `0.0.0.0`. L’interrupteur se trouve dans les réglages du serveur de l’interface.
 
-### 3. Désactiver le serveur quand vous ne l'utilisez pas
-La défense la plus simple est de l'éteindre. Ne démarrez le serveur local que lorsque vous l'utilisez activement pour du développement ou des tests.
+### 2. Utilisez un pare-feu
+
+Si vous avez vraiment besoin de "Serve on Local Network" laissez le pare-feu de votre système ou votre routeur bloquer le port 1234 depuis l’extérieur et n’autorisez que les adresses locales que vous utilisez.
+
+### 3. Coupez le serveur quand il ne sert pas
+
+Fermez-le quand vous avez terminé. Lancez le serveur local quand vous travaillez et fermez-le après.
 
 ## Conclusion
 
-Des outils comme LM Studio démocratisent l'IA, mais ils apportent aussi des responsabilités de sécurité dignes du cloud sur le poste de travail. Une simple case à cocher dans une interface peut exposer votre matériel au monde entier. Vérifiez toujours votre exposition réseau quand vous activez des fonctions serveur sur des outils locaux.
+LM Studio installe un serveur de modèles sur votre bureau et cela apporte les mêmes responsabilités réseau que sur une machine cloud. Une seule case à cocher sépare votre GPU d’internet. Regardez sur quoi un interrupteur de serveur écoute vraiment avant de le laisser allumé.

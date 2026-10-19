@@ -11,6 +11,7 @@ tags:
 ---
 import { Image } from 'astro:assets';
 import droidModules from '../../assets/unbuned/droid-modules.png';
+import sectionLayout from '../../assets/diagrams/unbuned-section-layout.svg';
 
 ## Why I Built This
 
@@ -55,6 +56,8 @@ The file is memory mapped instead of loaded into RAM. Some of these binaries are
 ## Step 2: Bun Leaves a Map at the End
 
 This is the part that made real file names possible. Bun does not only concatenate your code. Before it writes the section it builds a table of every file it embedded called the `StandaloneModuleGraph` and it puts that table at the very end.
+
+<Image src={sectionLayout} alt="Diagram of the .bun section showing the length header, the JavaScript modules, the embedded data, then the file table, the 32 byte Offsets struct and the trailer marker at the very end" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 The last 16 bytes of the section are a literal marker:
 
@@ -150,7 +153,7 @@ Freebuff shows why this matters. It ships one single minified module with 7.4 MB
 
 ### Bytecode
 
-If an app is built with `--bytecode` the JavaScript you extract is only the fallback. What actually runs is JavaScriptCore bytecode. unbuned tells you when that is the case and can write one bytecode blob per module using the pointers in the module graph. Every blob starts with the same header, and the length in that header matched the graph's length for every module I tested, which is a nice check that the extraction is right.
+If an app is built with `--bytecode` the JavaScript you extract is only the fallback. What actually runs is JavaScriptCore bytecode. unbuned tells you when that is the case and can write one bytecode blob per module using the pointers in the module graph. Every blob starts with the same header. The length in that header matched the graph's length for every module I tested so it doubles as a check that the extraction is right.
 
 It does not turn bytecode back into JavaScript. JSC bytecode is undocumented and changes between releases so that would be a whole compiler backend and not a weekend feature.
 

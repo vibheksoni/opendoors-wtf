@@ -1,7 +1,7 @@
 ---
-title: "Die Risiken offener Ollama-APIs aufgedeckt"
-description: "Wie der beliebte Ollama-API-Dienst ungesichert im Internet erreichbar sein kann, und welche praktischen Schritte deinen Rechner vor unbefugtem Zugriff schützen."
-pubDate: 2025-01-23
+title: "Das Risiko offener Ollama-APIs"
+description: "Wie der API-Dienst von Ollama im Internet landen kann wenn du ihn nicht absicherst und was du konkret tun kannst um deinen Rechner zu schützen."
+pubDate: 2026-01-23
 tags:
   - api security
   - ollama
@@ -16,52 +16,52 @@ import step2Img from '../../../assets/ollama/Step2.png';
 
 ## Das Problem
 
-Ollama ist ein beliebter API-Dienst, der lokal auf deinem Rechner läuft und es dir ermöglicht, KI-Modelle zu nutzen, ohne auf externe Cloud-Infrastruktur angewiesen zu sein. Er läuft auf Port **11434** und ist über `http://localhost:11434` erreichbar.
+Ollama ist ein API-Dienst der auf deinem eigenen Rechner läuft damit du KI-Modelle ohne die Cloud von jemand anderem nutzen kannst. Er hört auf Port **11434** und antwortet unter `http://localhost:11434`.
 
-Das Problem: Ollama hat keine eingebaute Authentifizierung. Das ist zwar keine Schwachstelle im klassischen Sinne, birgt aber ein erhebliches Risiko. Wenn der Port deines Rechners aus dem Internet erreichbar ist, kann jeder auf deinen Ollama-Dienst zugreifen und deine Ressourcen ohne Erlaubnis nutzen.
+Das Problem ist dass Ollama keine Authentifizierung mitbringt. Für sich genommen ist das keine Schwachstelle aber es wird eine in dem Moment wo der Port aus dem Internet erreichbar ist. Wer ihn findet nutzt deine Modelle und deine Hardware ohne zu fragen.
 
 ## Was schiefgehen kann
 
-Ohne Authentifizierung und mit einem offenen Port könnte ein Angreifer:
+Ohne Authentifizierung und mit offenem Port kann ein Angreifer einiges tun.
 
-- mit deinen KI-Modellen interagieren
-- Modelle herunterladen, die auf deinem Rechner laufen
-- Aufgaben auf deiner Hardware ausführen
+- Mit deinen KI-Modellen sprechen
+- Die Modelle herunterladen die auf deinem Rechner liegen
+- Aufgaben auf deiner GPU und deiner CPU starten
 
-Für Entwickler mit leistungsstarken Rechnern oder solche, die bei Cloud-Anbietern laufen, kann das zu hoher Ressourcennutzung und unerwarteten Rechnungen führen.
+Wenn du Ollama auf einer gemieteten Maschine laufen lässt kommt die Rechnung trotzdem ob du den Dienst genutzt hast oder nicht. Jemand anderes hat es getan.
 
-## Wie ich darauf gestoßen bin
+## Wie ich das gefunden habe
 
-Als ich mir den Befehl `ollama serve` angesehen habe, ist mir aufgefallen, dass der Dienst bereits läuft, sobald Ollama installiert und aktiv ist. Ich wollte herausfinden, wie groß das Ausmaß dieser Exposition ist, und habe dafür **FOFA** benutzt, eine Suchmaschine für den Cyberspace.
+Der Befehl `ollama serve` zeigt dir dass der Dienst bereits läuft sobald Ollama installiert und aktiv ist. Also habe ich mit **FOFA** nachgesehen wie viele davon aus dem Internet erreichbar sind was eine Suchmaschine für den Cyberraum ist.
 
-Ich habe mit einer einfachen Abfrage nach Rechnern gesucht, die Port 11434 offenlegen: `"Ollama is running" && port="11434"`. Diese Signatur habe ich gewählt, weil eine Standardinstallation von Ollama genau diesen String zurückgibt, wenn man den Root-Endpunkt (`/`) aufruft, und damit bestätigt, dass der Dienst aktiv ist.
+Ich habe nach Rechnern mit offenem Port 11434 gesucht und dafür die Abfrage `"Ollama is running" && port="11434"` genutzt. Diese Signatur funktioniert weil die Wurzel einer Standardinstallation von Ollama genau diesen Text zurückgibt und sich damit laufende Instanzen sicher finden lassen.
 
-<Image src={step1Img} alt="FOFA.info-Suchanfrage, die eine Suche nach Port 11434 zeigt" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={step1Img} alt="FOFA.info Abfrage nach Port 11434" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
-Die Ergebnisse waren besorgniserregend. Die Suche lieferte **über 60.000 offene Hosts**:
+Die Suche ergab **65.766 offene Hosts**.
 
-<Image src={step2Img} alt="FOFA.info-Suchergebnisse mit über 600,000 offenen Ollama-Instanzen" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={step2Img} alt="FOFA.info Ergebnisse mit 65.766 offenen Ollama-Instanzen" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
-- Mehrere Rechner mit offenem Port 11434 waren öffentlich erreichbar
-- Ich konnte mit den offenen Endpunkten interagieren, Modelle herunterladen und die Hardware nutzen
-- Viele Instanzen liefen auf leistungsstarken Systemen, vermutlich ohne dass die Besitzer es wussten
+- Port 11434 war auf allen erreichbar
+- Ich konnte Modelle lesen und Anfragen an ihre GPUs schicken
+- Viele liefen auf teurer Hardware und der Besitzer hatte keine Ahnung
 
-## So schützt du deinen Ollama-Dienst
+## So sicherst du deinen Ollama-Dienst
 
-Wenn du Ollama nutzt, solltest du diese Schritte umsetzen, um deinen Dienst abzusichern:
+Wenn du Ollama nutzt gibt es drei Dinge die du heute tun kannst.
 
-### 1. IP-Whitelisting
+### 1. IP-Liste
 
-Nutze eine Firewall, um den Zugriff nur auf vertrauenswürdige IPs zu beschränken.
+Nutze eine Firewall und lass nur die IPs durch denen du vertraust.
 
-### 2. Einen Authentifizierungs-Wrapper hinzufügen
+### 2. Authentifizierung davor
 
-Setze einen Wrapper oder Proxy-Dienst ein, der eine Authentifizierung verlangt, bevor jemand mit der Ollama-API interagieren kann.
+Setze einen Proxy davor der nach einem Token fragt bevor er irgendetwas weiterleitet.
 
-### 3. Öffentlichen Portzugriff deaktivieren
+### 3. Kein offener Port
 
-Stelle sicher, dass Port 11434 nicht aus dem Internet erreichbar ist. Konfiguriere ihn so, dass er nur lokalen Zugriff erlaubt.
+Binde den Dienst an `127.0.0.1` damit der Port von außerhalb der Maschine nicht erreichbar ist.
 
 ## Fazit
 
-Es geht nicht darum, Ollama die Schuld zu geben, sondern darum, die Risiken zu verstehen, die entstehen, wenn man lokale Dienste ohne passende Netzwerkkonfiguration betreibt. Mit grundlegenden Sicherheitsmaßnahmen schützt du dein System vor unbefugtem Zugriff und stellst sicher, dass deine Ressourcen auch wirklich deine bleiben.
+Das ist keine Kritik an Ollama. Es bringt einen lokalen Dienst mit und das ist der richtige Standard. Das Problem beginnt wenn ein lokaler Dienst auf einer öffentlichen IP landet und niemand nachgesehen hat. Zwanzig Minuten mit einer Firewall sind die ganze Lösung.

@@ -13,6 +13,7 @@ source: unbuned-bun-executables
 ---
 import { Image } from 'astro:assets';
 import droidModules from '../../../assets/unbuned/droid-modules.png';
+import sectionLayout from '../../../assets/diagrams/unbuned-section-layout.svg';
 
 ## Warum ich das gebaut habe
 
@@ -59,6 +60,8 @@ Die Datei wird per Memory Mapping eingebunden statt in den RAM geladen. Manche d
 Das ist der Teil, der echte Dateinamen möglich gemacht hat. Bun hängt nicht einfach nur deinen Code aneinander. Bevor es die Section schreibt, baut es eine Tabelle aller eingebetteten Dateien, den sogenannten `StandaloneModuleGraph`, und legt diese Tabelle ganz ans Ende.
 
 Die letzten 16 Bytes der Section sind ein literaler Marker:
+
+<Image src={sectionLayout} alt="Diagramm der .bun-Sektion mit Längenheader, den JavaScript-Modulen, den eingebetteten Daten, dann der Dateitabelle, der 32 Byte großen Offsets-Struktur und dem Trailer-Marker am Ende" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 ```text
 \n---- Bun! ----\n

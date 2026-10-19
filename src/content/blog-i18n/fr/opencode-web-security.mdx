@@ -1,7 +1,7 @@
 ---
-title: "OpenCode Web : un excellent outil, une configuration par défaut dangereuse"
-description: "OpenCode est une alternative multi-LLM puissante à Claude Code. Mais son interface web peut devenir un cauchemar de sécurité si elle n'est pas configurée correctement. Voici comment la sécuriser."
-pubDate: 2025-01-23
+title: "OpenCode Web : bon outil et défaut dangereux"
+description: "OpenCode est une alternative à Claude Code qui parle à plusieurs modèles et son interface web peut devenir un vrai problème si vous ne la configurez pas."
+pubDate: 2026-01-23
 tags:
   - api security
   - web security
@@ -21,47 +21,48 @@ import step2Img from '../../../assets/opencode-web/Steps2.png';
 
 ## La meilleure alternative ?
 
-J'utilise **OpenCode** depuis peu et, honnêtement, je trouve que c'est une alternative supérieure à Claude Code sur bien des points. Il prend en charge plusieurs fournisseurs de LLM (Ollama, OpenAI, Anthropic, etc.), il est open source et il me semble plus rapide. Pouvoir changer de modèle à la volée en fait un outil redoutable pour le développement en local.
+J’utilise **OpenCode** depuis un moment et sur beaucoup de points il me convient mieux que Claude Code. Il parle à plusieurs fournisseurs comme Ollama et Anthropic, il est open source et changer de modèle en cours de tâche est rapide.
 
-Cependant, comme beaucoup d'outils pour développeurs dans ce domaine, il propose un mode « Web UI » (`opencode web`) qui transforme votre CLI en application accessible depuis un navigateur. C'est très pratique, mais cela ouvre une énorme faille de sécurité si vous n'y prenez pas garde.
+Il fournit aussi un mode web avec `opencode web` qui transforme la CLI en application de navigateur. C’est pratique et c’est en même temps la partie la plus risquée de l’outil si vous ne faites pas attention.
 
 ## Le risque
 
-Quand vous lancez `opencode web`, un serveur démarre. Si vous le liez à `0.0.0.0` (toutes les interfaces) pour y accéder depuis un autre appareil de votre réseau, vous exposez potentiellement une vulnérabilité d'**exécution de code à distance (RCE)** à tout Internet.
+Lancer `opencode web` démarre un serveur. Si vous l’attachez à `0.0.0.0` pour qu’un portable de votre réseau l’atteigne, vous venez de publier un point d’entrée d’**exécution de code à distance** sur l’interface de cette machine.
 
-Comme pour l'interface web de Claude Code dont j'ai parlé précédemment, l'interface web d'OpenCode permet à l'utilisateur d'exécuter des commandes, de modifier des fichiers et d'interagir avec le shell. Sans authentification, quiconque trouve votre adresse IP devient administrateur de votre machine.
+L’interface web exécute des commandes, édite des fichiers et atteint un shell. C’est fait pour ça. Sans authentification celui qui trouve le port récupère tout ça.
 
-## L'exposition (recherche FOFA)
+## L’exposition
 
-J'ai fait une vérification rapide sur **FOFA** pour voir si cela arrivait dans la nature.
-Requête de recherche : `title="OpenCode"`
+J’ai vérifié si cela arrivait déjà en vrai avec **FOFA** et la requête `title="OpenCode"`.
 
-<Image src={step1Img} alt="Requête de recherche FOFA.info pour les instances OpenCode" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={step1Img} alt="Requête FOFA.info sur les instances OpenCode" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
-J'ai trouvé immédiatement **32 hôtes exposés**.
+J’ai trouvé **32 hôtes exposés** immédiatement.
 
-<Image src={step2Img} alt="Résultats FOFA montrant 32 instances web OpenCode exposées" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={step2Img} alt="Résultats FOFA affichant 32 instances web OpenCode exposées" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
-Même si 32 peut sembler peu, rappelez-vous qu'il s'agit d'un outil de développement de niche. Ça fait 32 développeurs qui ont probablement exposé par accident tout leur environnement de développement au web public. Comme OpenCode est personnalisable, beaucoup d'utilisateurs font sans doute tourner des versions modifiées qui n'apparaissent pas dans cette simple recherche par titre, ce qui veut dire que le chiffre réel est probablement plus élevé.
+Trente-deux semble peu pour un moteur de recherche et ce n’est pas peu. Ce sont 32 environnements de développement joignables depuis l’internet ouvert. OpenCode se personnalise facilement donc une version qui change le titre n’apparaît pas ici du tout.
 
 ## Comment le sécuriser
 
-Les développeurs d'OpenCode ont bien inclus un mécanisme de sécurité, mais encore faut-il l'utiliser.
+OpenCode fournit un moyen de verrouiller l’interface web. Il faut l’activer.
 
-### 1. Définir un mot de passe
-Vous pouvez verrouiller l'interface web en définissant un mot de passe. Cette simple étape empêche les accès non autorisés.
+### 1. Mettez un mot de passe
 
-Lancez cette commande avant de démarrer le serveur web :
+Mettez un mot de passe avant de démarrer le serveur pour que personne n’atteigne l’interface sans lui.
+
+Lancez cette commande avant de démarrer le serveur web.
 ```bash
 opencode --set-password <your-strong-password>
 ```
-*Vous pouvez aussi définir la variable d'environnement `OPENCODE_SERVER_PASSWORD`.*
+*Vous pouvez aussi définir la variable d’environnement `OPENCODE_SERVER_PASSWORD` à la place.*
 
-### 2. Ne pas l'exposer à Internet
-Sauf si vous avez une raison très précise (et un VPN ou un tunnel), ne redirigez pas le port d'OpenCode vers l'Internet public. Gardez-le sur `localhost` (`127.0.0.1`) ou strictement au sein de votre réseau local de confiance (`LAN`).
+### 2. Ne l’exposez pas sur internet
+
+Ne redirigez pas le port vers internet sauf si un VPN ou un tunnel se trouve devant. Gardez-le sur `127.0.0.1` ou sur un réseau local que vous contrôlez.
 
 ## Conclusion
 
-OpenCode est un outil formidable que je recommande vivement pour sa prise en charge multi-modèles et sa rapidité. Mais « puissant » veut dire « dangereux » si l'on retire les garde-fous.
+Je recommande OpenCode. Un outil qui peut réécrire vos fichiers et exécuter votre shell doit être traité comme tel.
 
-Ne laissez pas votre assistant de code devenir la porte d'entrée d'un attaquant. Définissez un mot de passe.
+Mettez le mot de passe avant de le lancer. C’est toute la leçon.

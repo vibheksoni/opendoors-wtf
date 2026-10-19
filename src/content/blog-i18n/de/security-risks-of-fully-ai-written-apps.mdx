@@ -1,7 +1,7 @@
 ---
-title: "Die gefährliche Illusion vom 'Solo-KI-Entwickler'"
-description: "Warum es zu verwundbarer Software führt, KI als Ersatz für technische Aufsicht zu behandeln, und wie man richtig mit KI als Co-Entwickler arbeitet."
-pubDate: 2025-01-23
+title: "Die gefährliche Illusion vom Solo-KI-Entwickler"
+description: "Warum ein ganzes Projekt an einen KI-Agenten zu übergeben zu unsicherer Software führt und wie du mit einem als Partner statt als Ersatz arbeitest."
+pubDate: 2026-01-23
 tags:
   - ai security
   - devsecops
@@ -11,54 +11,67 @@ lang: de
 source: security-risks-of-fully-ai-written-apps
 ---
 
-## Die Falle von „Es funktioniert einfach"
+import { Image } from 'astro:assets';
+import reviewLoop from '../../../assets/diagrams/ai-review-loop.svg';
 
-Wir leben in einem goldenen Zeitalter der generativen KI. Tools wie Claude Code, Cursor und GitHub Copilot erlauben es uns, Features schneller auszuliefern als je zuvor. Aber ich beobachte einen wachsenden Trend in Open-Source-Projekten und sogar in Enterprise-Codebasen: **Der abwesende Entwickler.**
+## Die Falle mit dem "läuft ja"
 
-Das passiert, wenn ein Mensch die KI nicht als Werkzeug behandelt, sondern als Auftragnehmer, dem er blind vertrauen kann. Er promptet, kopiert, deployt. Wenn es kompiliert, wird es ausgeliefert.
+Werkzeuge wie Claude Code, Cursor und GitHub Copilot lassen uns Funktionen schneller ausliefern als von Hand. Ich nutze sie jeden Tag. Aber ich sehe ein Muster in Open-Source-Projekten und in Unternehmenscodebasen bei dem die Person die den Prompt schreibt aufhört Teil des Prozesses zu sein.
 
-Diese Denkweise ist gefährlich. Wie ich beim Auditieren mehrerer „vollständig KI-generierter" Web-UIs festgestellt habe, führt dieser Ansatz zu Sicherheitslücken, so groß, dass man einen Lkw hindurchfahren könnte: Authentifizierung auf der Client-Seite, nicht validierte Dateipfade und uneingeschränkter Shell-Zugriff.
+Es läuft so. Du behandelst die KI wie jemanden den du eingestellt hast und dem du zutraust es richtig zu machen. Du schreibst den Prompt. Du kopierst das Ergebnis. Du deployst es. Wenn es kompiliert geht es raus.
 
-## KI ist ein Junior-Entwickler auf Speed
+So bekommst du Sicherheitslücken durch die ein Lkw passt. Ich habe Authentifizierung im Browser, ungeprüfte Dateipfade und uneingeschränkten Shell-Zugriff in mehreren Weboberflächen gefunden die laut ihren eigenen Autoren vollständig von KI generiert waren. Abgeschlossene Türen mit dem Schlüssel daneben geklebt.
 
-Stell dir vor, du stellst einen Junior-Entwickler ein, der:
-1. 1000 Wörter pro Minute tippt.
-2. Jede existierende Bibliothek kennt.
-3. Null Verständnis für Sicherheitsfolgen hat, solange man es ihm nicht ausdrücklich sagt.
-4. Dich selbstbewusst anlügt, wenn er die Antwort nicht kennt.
+## Die KI ist ein Junior mit Turbo
 
-Würdest du diesen Entwickler ohne Code-Review in Produktion pushen lassen? **Nein.**
+Stell dir einen Junior-Entwickler vor der tausend Wörter pro Minute tippt und jede Bibliothek kennt die es gibt. Gib ihm jetzt zwei weitere Eigenschaften.
 
-Genau das passiert aber, wenn wir die KI ein Projekt „solo" durchziehen lassen. Die KI optimiert darauf, **den unmittelbaren Prompt zu lösen**. Sie optimiert nicht von Natur aus auf die „unbekannten Unbekannten", etwa darauf, was passiert, wenn ein Nutzer eine Anfrage abfängt oder wenn ein Pfadparameter `../../` enthält.
+Er hat keine Ahnung wie ein Sicherheitsproblem aussieht außer jemand sagt es ihm. Und er sagt nie dass er etwas nicht weiß. Er gibt dir eine selbstsichere falsche Antwort.
 
-## Die „Wiederholungsschleife" des Verderbens
+Würdest du diese Person nach Produktion lassen ohne dass jemand drüberliest? Natürlich nicht.
 
-Eine der häufigsten Fehlerarten ist die „Kontextschleife". Du bittest die KI, einen Bug zu beheben. Sie liefert dir Code. Der Code schlägt fehl. Du fügst den Fehler wieder ein. Sie liefert dir eine „reparierte" Version.
+Genau das macht ein Projekt nur mit KI. Das Modell löst sehr gut was direkt vor ihm liegt und hat keinen Grund darüber nachzudenken was passiert wenn jemand eine Anfrage schickt die du nicht geplant hast. Ein Pfadparameter mit `../../` gehört nicht zur Aufgabe die du gestellt hast und kommt deshalb nie ins Bild.
 
-Nach fünf Iterationen hast du vielleicht funktionierenden Code, aber auch ein Frankenstein-Monster aus Patches. Die KI hat den Faden der Gesamtarchitektur verloren. Sie wirft nur noch Spaghetti an die Wand, um deine Fehlermeldung zufriedenzustellen.
+## Die Schleife die Bugs züchtet
 
-**Hier entstehen Schwachstellen.** In der Hektik, alles „grün zu bekommen", werden Sicherheitsprüfungen umgangen, Eingabevalidierung fällt weg und hartcodierte Secrets schleichen sich ein.
+Der Fehlermodus den ich am häufigsten sehe ist die Kontextschleife. Du gibst der KI einen Bug. Sie gibt dir Code. Der Code scheitert weiter. Du klebst den Fehler zurück und bekommst eine "korrigierte" Version.
 
-## Wie man KI tatsächlich nutzt (die „Co-Entwickler"-Denkweise)
+Fünf Runden später läuft etwas. Du hast außerdem einen Haufen Patches von denen jeder ein Symptom gelöst hat und das Modell hat die Form des Systems verloren mit dem es angefangen hat. Jetzt passt es Code an deine Fehlermeldung an statt an das Design.
 
-Um mit KI sichere Software zu bauen, musst du dein mentales Modell ändern. Du bist nicht der „Prompter", du bist der **Lead Engineer**. Die KI ist dein Pair-Programming-Partner.
+Hier kommen die Schwachstellen rein. Auf dem Weg zu grünen Tests fällt eine Berechtigungsprüfung weg. Eingabevalidierung verschwindet weil sie im Weg war. Ein Schlüssel wird fest im Code hinterlegt weil die Umgebungsvariable lästig war. Niemand merkt es weil alle auf den Test schauen der endlich grün wird.
 
-### 1. Akzeptiere keine Magie
-Wenn die KI einen Codeblock schreibt, den du nicht verstehst, **halte an**. Lass dir den Code erklären. Wenn du nicht überprüfen kannst, dass er sicher ist, geh davon aus, dass er es nicht ist.
+## Wie du KI wirklich nutzt
 
-### 2. Hinterfrage die Ausgabe
-Sprich mit der KI wie mit einem Kollegen.
-- *„Hey, du hast bei diesem Refactoring das CSRF-Token entfernt. Warum?"*
-- *„Dieser Input-Handler sieht anfällig für XSS aus. Schreib ihn mit Sanitization neu."*
-- *„Du verwendest hier `dangerouslySetInnerHTML`. Gibt es einen sichereren Weg?"*
+Die Antwort ist nicht weniger KI. Die Antwort ist im Stuhl zu bleiben. Du bist der verantwortliche Entwickler und die KI ist die Person mit der du zusammenarbeitest.
 
-### 3. Prüfe die Diffs, nicht nur das Ergebnis
-Schau nicht nur auf die fertige Datei. Schau dir den *Diff* an. Hat die KI heimlich einen `TODO`-Kommentar gelöscht? Hat sie eine Berechtigungsprüfung entfernt? KI-Modelle haben ein begrenztes Kontextfenster; sie „vergessen" oft Einschränkungen, die früher in der Unterhaltung festgelegt wurden.
+<Image src={reviewLoop} alt="Diagramm einer fünfstufigen Review-Schleife zwischen einer Person und einem KI-Agenten. Du fragst, die KI entwirft, du liest den Diff, du widersprichst und die Prüfungen laufen durch bevor es rausgeht. Ein Rückpfeil schickt den abgelehnten Entwurf zurück an die KI." style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+### Akzeptiere keinen Code den du nicht erklären kannst
+
+Wenn die KI einen Block schreibt den du nicht verstehst dann halt an. Lass sie den Block Zeile für Zeile erklären. Wenn du immer noch nicht sagen kannst warum er sicher ist dann geh davon aus dass er es nicht ist. Diese eine Regel fängt fast den ganzen Schaden ab bevor er landet.
+
+### Widersprich dem Ergebnis
+
+Sprich mit ihr wie mit einem Kollegen der etwas schlampig geschrieben hat.
+
+- "Du hast das CSRF-Token in diesem Refactor entfernt. Warum musste das weg?"
+- "Dieser Eingabe-Handler sieht anfällig für XSS aus. Schreib ihn mit Sanitizing neu."
+- "Du nutzt hier `dangerouslySetInnerHTML`. Gibt es einen sicheren Weg?"
+
+Das letzte lohnt sich laut zu sagen weil das Modell das Muster wiederholt das es zuletzt benutzt hat. Das Problem zu benennen reicht oft schon für eine bessere Antwort im nächsten Durchlauf.
+
+### Lies den Diff
+
+Lies nicht nur die fertige Datei. Lies was sich geändert hat.
+
+Hat es eine Berechtigungsprüfung gelöscht während es etwas anderes aufgeräumt hat? Hat es einen Validierungsaufruf entfernt weil der gerade Pfad ihn nicht brauchte? Modelle arbeiten in einem Kontextfenster und verlieren still Vorgaben die du vor zwei Stunden gesetzt hast. Der Diff ist der einzige Ort der dir zeigt was das Gebäude verlassen hat.
+
+### Halte die Prüfungen außerhalb des Chats
+
+Einem Modell kann man einreden dass ein Test besteht. Deiner CI nicht. Authentifizierung und Autorisierung gehören in den Code und in die Pipeline wo der Agent sie erfüllen muss. Eingabevalidierung gehört an die Grenze wo die Daten ankommen statt in einen Prompt von dem du hoffst dass er sich erinnert.
 
 ## Fazit
 
-KI ist der mächtigste Kräfteverstärker, den wir in der Softwareentwicklung bisher gesehen haben. Ich nutze sie gerne. Ich nutze sie jeden Tag.
+KI macht einen starken Entwickler viel schneller und einen nachlässigen Prozess schneller kaputt. Wenn deine Absicht ist jetzt etwas rauszuhauen und zu sehen was passiert dann hilft dir das Modell genau dabei. Wenn deine Absicht ist etwas zu liefern das hält dann hilft es dir auch dabei. Die Absicht ist in beiden Fällen deine.
 
-Aber sie ist **kein** Ersatz für technisches Urteilsvermögen. Sie ist ein Werkzeug, das deine Absicht verstärkt. Wenn deine Absicht lautet „bau das schnell, mir ist egal wie", dann verstärkt sie diese Nachlässigkeit. Wenn deine Absicht lautet „hilf mir, ein robustes, sicheres System zu bauen", dann verstärkt sie dein handwerkliches Können.
-
-Lass nicht die KI das Auto fahren. Du fährst. Die KI liest die Karte.
+Du fährst. Die KI liest die Karte und diskutiert mit dir über die Ausfahrt und diese Diskussion ist der nützliche Teil.

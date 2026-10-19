@@ -1,7 +1,7 @@
 ---
-title: "Expondo os riscos das APIs abertas do Ollama"
-description: "Como o popular serviço de API do Ollama pode ficar exposto à internet se não for protegido, e passos práticos para proteger sua máquina contra acesso não autorizado."
-pubDate: 2025-01-23
+title: "O risco das APIs do Ollama abertas"
+description: "Como o serviço de API do Ollama pode ficar exposto na internet se você não proteger e passos práticos para blindar sua máquina contra acesso não autorizado."
+pubDate: 2026-01-23
 tags:
   - api security
   - ollama
@@ -16,52 +16,52 @@ import step2Img from '../../../assets/ollama/Step2.png';
 
 ## O problema
 
-Ollama é um serviço de API popular que roda localmente na sua máquina, permitindo usar modelos de IA sem depender de infraestrutura de nuvem externa. Ele opera na porta **11434** e é acessível via `http://localhost:11434`.
+Ollama é um serviço de API que roda na sua própria máquina para você usar modelos de IA sem depender da nuvem de outra pessoa. Ele escuta na porta **11434** e responde em `http://localhost:11434`.
 
-Aqui está o ponto: o Ollama não tem autenticação nativa. Embora isso não seja uma vulnerabilidade no sentido tradicional, cria um risco significativo. Se a porta da sua máquina estiver exposta à internet, qualquer pessoa pode acessar o seu serviço Ollama e usar seus recursos sem permissão.
+O problema é que o Ollama não vem com autenticação. Isso não é uma vulnerabilidade sozinho mas vira uma no momento em que a porta fica alcançável pela internet. Quem encontra-la usa seus modelos e seu hardware sem pedir licença.
 
 ## O que pode dar errado
 
-Sem autenticação e com uma porta aberta, um atacante poderia:
+Sem autenticação e com a porta aberta, um atacante consegue fazer algumas coisas.
 
-- Interagir com os seus modelos de IA
-- Baixar os modelos que rodam na sua máquina
-- Executar tarefas usando o seu hardware
+- Conversar com seus modelos de IA
+- Baixar os modelos que estão na sua máquina
+- Rodar tarefas na sua GPU e na sua CPU
 
-Para desenvolvedores com máquinas de alto desempenho ou que rodam em provedores de nuvem, isso pode levar a um consumo de recursos significativo e a cobranças inesperadas.
+Se você roda Ollama numa máquina alugada a fatura chega do mesmo jeito, tenha você usado o serviço ou não. Outra pessoa usou.
 
-## Como eu descobri isso
+## Como eu encontrei isso
 
-Enquanto explorava o comando `ollama serve`, percebi que o serviço já está rodando se o Ollama estiver instalado e ativo. Decidi verificar a escala dessa exposição usando o **FOFA**, um mecanismo de busca de ciberespaço.
+O comando `ollama serve` mostra que o serviço já está rodando assim que o Ollama está instalado e ativo. Então eu fui ver quantos deles estavam alcançáveis pela internet com o **FOFA** que é um motor de busca de ciberespaço.
 
-Pesquisei por máquinas expondo a porta 11434 com uma consulta simples: `"Ollama is running" && port="11434"`. Escolhi essa assinatura específica porque, ao acessar o endpoint raiz (`/`) de uma instalação padrão do Ollama, ele retorna exatamente essa string confirmando que o serviço está ativo.
+Procurei máquinas com a porta 11434 exposta usando a consulta `"Ollama is running" && port="11434"`. Essa assinatura funciona porque a raiz de uma instalação padrão do Ollama devolve exatamente esse texto então serve para achar instâncias vivas.
 
-<Image src={step1Img} alt="Consulta de busca no FOFA.info mostrando a pesquisa pela porta 11434" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={step1Img} alt="Consulta no FOFA.info buscando a porta 11434" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
-Os resultados foram preocupantes. A busca retornou **mais de 60.000 hosts expostos**:
+A busca devolveu **65.766 hosts expostos**.
 
-<Image src={step2Img} alt="Resultados de busca do FOFA.info exibindo mais de 600.000 instâncias do Ollama expostas" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={step2Img} alt="Resultados do FOFA.info mostrando 65.766 instâncias do Ollama expostas" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
-- Várias máquinas com a porta 11434 aberta estavam acessíveis publicamente
-- Consegui interagir com endpoints expostos, baixar modelos e usar o hardware deles
-- Muitas instâncias rodavam em setups de alto desempenho, provavelmente sem o conhecimento do dono
+- A porta 11434 estava alcançável em todas elas
+- Eu conseguia ler modelos e mandar requisições para as GPUs
+- Muitas eram hardware caro e o dono não fazia ideia
 
-## Como proteger o seu serviço Ollama
+## Como proteger seu serviço do Ollama
 
-Se você usa o Ollama, siga estes passos para proteger o seu serviço:
+Se você usa Ollama existem três coisas que dá para fazer hoje.
 
 ### 1. Lista de IPs permitidos
 
-Use um firewall para restringir o acesso apenas a IPs confiáveis.
+Use um firewall e deixe passar só os IPs em que você confia.
 
-### 2. Adicione uma camada de autenticação
+### 2. Coloque autenticação na frente
 
-Implemente um wrapper ou serviço de proxy que exija autenticação antes de interagir com a API do Ollama.
+Ponha um proxy na frente que peça um token antes de repassar qualquer coisa.
 
-### 3. Desative o acesso público à porta
+### 3. Feche a porta pública
 
-Garanta que a porta 11434 não esteja acessível pela internet. Configure-a para permitir apenas acesso local.
+Amarre o serviço em `127.0.0.1` para a porta não ser alcançável de fora da máquina.
 
 ## Conclusão
 
-Isto não é sobre culpar o Ollama, e sim sobre entender os riscos de rodar serviços locais sem a configuração de rede adequada. Ao aplicar medidas básicas de segurança, você protege seu sistema contra acesso não autorizado e garante que seus recursos continuem sendo seus.
+Isso não é uma crítica ao Ollama. Ele entrega um serviço local e esse é o padrão correto. O problema começa quando um serviço local termina num IP público e ninguém olhou. Vinte minutos com um firewall resolvem tudo.

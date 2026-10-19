@@ -1,7 +1,7 @@
 ---
 title: "EvilChrome: Chrome Security Research PoC"
 description: "A proof-of-concept exploring how Chrome browser instances can be manipulated for malicious purposes. This research highlights the risks of browser binary replacement attacks."
-pubDate: 2024-01-24
+pubDate: 2026-01-23
 tags:
   - browser security
   - chrome
@@ -15,13 +15,13 @@ What if an attacker could replace a target's Chrome browser binary with a malici
 
 ## Technical Implementation
 
-The PoC leverages several key components:
+The proof of concept has a few parts.
 
 ### Binary Replacement
 
 - Replaces the legitimate Chrome binary with a modified version
 - Maintains all original Chrome functionality
-- Seamlessly integrates with the system
+- Fits into the system without anything else noticing
 
 ### Profile Loading
 

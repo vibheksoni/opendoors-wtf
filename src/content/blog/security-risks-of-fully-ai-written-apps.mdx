@@ -1,62 +1,74 @@
 ---
 title: "The Dangerous Illusion of the 'Solo AI Developer'"
-description: "Why treating AI as a replacement for engineering oversight leads to vulnerable software, and how to properly work with AI as a co-developer."
-pubDate: 2025-01-23
+description: "Why handing a whole project to an AI agent leads to vulnerable software and how to work with one as a co-developer instead."
+pubDate: 2026-01-23
 tags:
   - ai security
   - devsecops
   - software engineering
   - opinion
 ---
+import { Image } from 'astro:assets';
+import reviewLoop from '../../assets/diagrams/ai-review-loop.svg';
 
 ## The Trap of "It Just Works"
 
-We are living in a golden age of generative AI. Tools like Claude Code, Cursor, and GitHub Copilot allow us to ship features faster than ever. But there's a growing trend I'm seeing in open-source projects and even enterprise codebases: **The Absentee Developer.**
+Tools like Claude Code, Cursor and GitHub Copilot let us ship features faster than we ever could by hand. I use them every day. But I keep seeing a pattern in open-source projects and in enterprise codebases where the person writing the prompt stops being part of the process.
 
-This happens when a human treats the AI not as a tool, but as a contractor they can blindly trust. They prompt, they copy-paste, they deploy. If it compiles, it ships.
+It goes like this. You treat the AI as somebody you hired and can trust to get it right. You prompt. You copy the result. You deploy it. If it compiles it ships.
 
-This mindset is dangerous. As I discovered while auditing several "fully AI-generated" web UIs, this approach leads to security holes so large you could drive a truck through them—client-side authentication, unvalidated file paths, and unrestricted shell access.
+That is how you end up with security holes you could drive a truck through. I found client-side authentication, unvalidated file paths and unrestricted shell access in several web UIs that were, by their authors' own description, fully AI generated. Locked doors with the key taped to them.
 
-## AI is a Junior Developer on Speed
+## AI Is a Junior Developer on Speed
 
-Imagine hiring a junior developer who:
-1. Types 1000 words per minute.
-2. Knows every library in existence.
-3. Has zero concept of security implications unless explicitly told.
-4. Will confidently lie to you if they don't know the answer.
+Imagine a junior developer who types a thousand words a minute and knows every library that exists. Now give them two more traits.
 
-Would you let that developer push to production without a code review? **No.**
+They have no idea what a security problem looks like unless somebody tells them. They also never say they do not know something. They will hand you a confident answer that is wrong.
 
-Yet, that is exactly what happens when we let AI "solo" a project. The AI optimizes for **solving the immediate prompt**. It doesn't inherently optimize for the "unknown unknowns"—like what happens if a user intercepts a request, or if a path parameter contains `../../`.
+Would you let that person push to production without anybody reading it? Of course not.
 
-## The "Repetitive Loop" of Doom
+That is exactly what a solo AI project does. The model is very good at solving the thing in front of it and it has no reason to think about what happens when somebody sends a request you did not plan for. A path parameter with `../../` in it is not part of the task you asked for so it never enters the picture.
 
-One of the most common failure modes is the "Context Loop." You ask the AI to fix a bug. It gives you code. The code fails. You paste the error back. It gives you a "fixed" version.
+## The Loop That Breeds Bugs
 
-After 5 iterations, you might have working code, but you also have a Frankenstein's monster of patches. The AI has lost the thread of the overall architecture. It's just throwing spaghetti at the wall to satisfy your error message.
+The failure mode I see most is the context loop. You give the AI a bug. It gives you code. The code still fails. You paste the error back and get a fixed version.
 
-**This is where vulnerabilities are born.** In the rush to "make it green," security checks get bypassed, input validation gets dropped, and hardcoded secrets slip in.
+Five rounds in you have something that runs. You also have a pile of patches that each solved one symptom and the model has lost the shape of the system it started with. It is now fitting code to your error message rather than to the design.
 
-## How to actually use AI (The "Co-Developer" Mindset)
+This is where the vulnerabilities get in. In the push to make the tests green a permission check gets dropped. Input validation disappears because it was getting in the way. A key gets hardcoded because the environment variable was annoying. Nobody notices because everybody is watching the failing test go green.
 
-To build secure software with AI, you need to shift your mental model. You are not the "prompter"; you are the **Lead Engineer**. The AI is your pair programmer.
+## How to Actually Use AI
 
-### 1. Don't Accept Magic
-If the AI writes a block of code you don't understand, **stop**. Ask it to explain. If you can't verify it's secure, assume it isn't.
+The fix is not using less AI. It is staying in the chair. You are the lead engineer and the AI is the person you are pairing with.
 
-### 2. Challenge the Output
-Talk to the AI like a colleague.
-- *"Hey, you removed the CSRF token in this refactor. Why?"*
-- *"This input handler looks vulnerable to XSS. Rewrite it with sanitization."*
-- *"You're using `dangerouslySetInnerHTML` here. Is there a safer way?"*
+<Image src={reviewLoop} alt="Diagram of a five step review loop between a person and an AI agent. You ask, the AI drafts, you read the diff, you push back and the checks pass before it ships. A return arrow sends a rejected draft back to the AI to try again." style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
-### 3. Review the diffs, not just the result
-Don't just look at the final file. Look at the *diff*. Did the AI sneakily delete a `TODO` comment? Did it remove a permission check? AI models have a limited context window; they often "forget" constraints established earlier in the conversation.
+### Don't Accept Code You Cannot Explain
+
+If the AI writes a block you do not understand then stop. Ask it to explain the block line by line. If you still cannot say why it is safe then assume it is not. That one rule catches most of the damage before it lands.
+
+### Push Back on the Output
+
+Talk to it like a colleague who wrote something sloppy.
+
+- "You removed the CSRF token in this refactor. Why did that need to go?"
+- "This input handler looks vulnerable to XSS. Rewrite it with sanitization."
+- "You are using `dangerouslySetInnerHTML` here. Is there a safer way?"
+
+The last one is worth saying out loud because the model will repeat whichever pattern it used last. Naming the problem is often enough to get a better answer on the next pass.
+
+### Read the Diff
+
+Do not just read the final file. Read what changed.
+
+Did it delete a permission check while it was cleaning something up? Did it drop a validation call because the happy path did not need it? Models work inside a context window and they quietly lose constraints you set two hours ago. A diff is the only place that shows you what left the building.
+
+### Keep the Checks Outside the Chat
+
+A model can be talked into believing a test passes. Your CI cannot. Authentication and authorization checks belong in the code and in the pipeline where the agent has to satisfy them. Input validation belongs at the boundary where the data arrives rather than in a prompt you hope it remembers.
 
 ## Conclusion
 
-AI is the most powerful force multiplier we've seen in software engineering. I love using it. I use it every day.
+AI makes a strong engineer much faster and it makes a careless process fail faster. If your intent is to ship something now and see what happens then the model will help you do exactly that. If your intent is to ship something that holds up then it will help with that too. The intent is yours either way.
 
-But it is **not** a replacement for engineering judgment. It is a tool that amplifies your intent. If your intent is "build this fast and I don't care how," it will amplify that recklessness. If your intent is "help me build a robust, secure system," it will amplify your craftsmanship.
-
-Don't let the AI drive the car. You drive. Let the AI read the map.
+You drive. The AI reads the map and argues with you about the exit and that argument is the useful part.

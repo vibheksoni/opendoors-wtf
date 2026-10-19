@@ -1,7 +1,7 @@
 ---
-title: "Exponiendo los riesgos de las APIs de Ollama abiertas"
-description: "Cómo el popular servicio de API de Ollama puede quedar expuesto a internet si no se asegura, y pasos prácticos para proteger tu máquina de accesos no autorizados."
-pubDate: 2025-01-23
+title: "El riesgo de las APIs de Ollama abiertas"
+description: "Cómo el servicio de API de Ollama puede quedar expuesto a internet si no lo aseguras y pasos concretos para proteger tu máquina de accesos no autorizados."
+pubDate: 2026-01-23
 tags:
   - api security
   - ollama
@@ -16,52 +16,52 @@ import step2Img from '../../../assets/ollama/Step2.png';
 
 ## El problema
 
-Ollama es un servicio de API popular que corre localmente en tu máquina y te permite usar modelos de IA sin depender de infraestructura externa en la nube. Opera en el puerto **11434** y se accede a través de `http://localhost:11434`.
+Ollama es un servicio de API que corre en tu propia máquina para que puedas usar modelos de IA sin depender de la nube de otra persona. Escucha en el puerto **11434** y responde en `http://localhost:11434`.
 
-Este es el problema: Ollama no tiene autenticación integrada. Aunque esto no es una vulnerabilidad en el sentido tradicional, genera un riesgo importante. Si el puerto de tu máquina está expuesto a internet, cualquiera puede acceder a tu servicio de Ollama y usar tus recursos sin permiso.
+El problema es que Ollama no trae autenticación. Eso no es una vulnerabilidad por sí solo pero se convierte en una en el momento en que el puerto es alcanzable desde internet. Quien lo encuentre puede usar tus modelos y tu hardware sin preguntar.
 
 ## Qué puede salir mal
 
-Sin autenticación y con un puerto abierto, un atacante podría:
+Sin autenticación y con el puerto abierto, un atacante puede hacer varias cosas.
 
-- Interactuar con tus modelos de IA
-- Descargar los modelos que corren en tu máquina
-- Ejecutar tareas usando los recursos de tu hardware
+- Hablar con tus modelos de IA
+- Descargar los modelos que tienes en la máquina
+- Lanzar tareas en tu GPU y tu CPU
 
-Para desarrolladores con máquinas de alto rendimiento o que corren en proveedores de nube, esto podría traducirse en un uso considerable de recursos y facturas inesperadas.
+Si corres Ollama en una máquina alquilada la factura llega igual hayas usado el servicio o no. Lo usó otra persona.
 
-## Cómo encontré esto
+## Cómo lo encontré
 
-Mientras exploraba el comando `ollama serve`, me di cuenta de que el servicio ya está corriendo si Ollama está instalado y activo. Decidí comprobar la escala de esta exposición usando **FOFA**, un motor de búsqueda del ciberespacio.
+El comando `ollama serve` te dice que el servicio ya está corriendo en cuanto Ollama está instalado y activo. Así que revisé cuántos de ellos eran alcanzables desde internet con **FOFA** que es un motor de búsqueda de ciberespacio.
 
-Busqué máquinas que exponen el puerto 11434 con una consulta simple: `"Ollama is running" && port="11434"`. Elegí esta firma específica porque, al acceder al endpoint raíz (`/`) de una instalación por defecto de Ollama, este devuelve exactamente esa cadena confirmando que el servicio está activo.
+Busqué máquinas con el puerto 11434 expuesto usando la consulta `"Ollama is running" && port="11434"`. Esa firma funciona porque la raíz de una instalación de Ollama devuelve exactamente ese texto así que sirve para encontrar instancias vivas.
 
-<Image src={step1Img} alt="Consulta de búsqueda en FOFA.info mostrando la búsqueda del puerto 11434" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={step1Img} alt="Consulta en FOFA.info buscando el puerto 11434" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
-Los resultados fueron preocupantes. La búsqueda devolvió **más de 60,000 hosts expuestos**:
+La búsqueda devolvió **65.766 hosts expuestos**.
 
-<Image src={step2Img} alt="Resultados de búsqueda en FOFA.info mostrando más de 600,000 instancias de Ollama expuestas" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={step2Img} alt="Resultados de FOFA.info mostrando 65.766 instancias de Ollama expuestas" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
-- Varias máquinas con el puerto 11434 abierto eran accesibles públicamente
-- Pude interactuar con los endpoints expuestos, descargar modelos y usar su hardware
-- Muchas instancias corrían en equipos de gran potencia, probablemente sin que sus dueños lo supieran
+- El puerto 11434 estaba alcanzable en todas
+- Podía leer modelos y mandar peticiones a sus GPUs
+- Muchas eran hardware caro y el dueño no tenía idea
 
 ## Cómo proteger tu servicio de Ollama
 
-Si usas Ollama, sigue estos pasos para asegurar tu servicio:
+Si usas Ollama hay tres cosas que puedes hacer hoy.
 
 ### 1. Lista blanca de IPs
 
-Usa un firewall para restringir el acceso únicamente a IPs de confianza.
+Usa un firewall y deja pasar solo las IPs en las que confías.
 
-### 2. Agrega una capa de autenticación
+### 2. Ponle autenticación delante
 
-Implementa un wrapper o un servicio proxy que exija autenticación antes de interactuar con la API de Ollama.
+Coloca un proxy delante que pida un token antes de reenviar cualquier cosa.
 
-### 3. Deshabilita el acceso público al puerto
+### 3. Cierra el puerto público
 
-Asegúrate de que el puerto 11434 no sea accesible desde internet. Configúralo para permitir únicamente acceso local.
+Ata el servicio a `127.0.0.1` para que el puerto no sea alcanzable desde fuera de la máquina.
 
 ## Conclusión
 
-Esto no se trata de culpar a Ollama, sino de entender los riesgos de correr servicios locales sin una configuración de red adecuada. Al implementar medidas básicas de seguridad, puedes proteger tu sistema de accesos no autorizados y asegurarte de que tus recursos sigan siendo tuyos.
+Esto no va contra Ollama. Trae un servicio local y ese es el comportamiento correcto por defecto. El problema empieza cuando un servicio local termina en una IP pública y nadie lo revisó. Veinte minutos con un firewall son toda la solución.

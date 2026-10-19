@@ -1,7 +1,7 @@
 ---
-title: "La peligrosa ilusión del 'desarrollador de IA en solitario'"
-description: "Por qué tratar a la IA como un reemplazo de la supervisión de ingeniería lleva a software vulnerable, y cómo trabajar correctamente con la IA como co-desarrolladora."
-pubDate: 2025-01-23
+title: "La ilusión peligrosa del desarrollador solo con IA"
+description: "Por qué entregarle un proyecto entero a un agente de IA termina en software vulnerable y cómo trabajar con uno como compañero en vez de sustituto."
+pubDate: 2026-01-23
 tags:
   - ai security
   - devsecops
@@ -11,54 +11,67 @@ lang: es
 source: security-risks-of-fully-ai-written-apps
 ---
 
-## La trampa del "simplemente funciona"
+import { Image } from 'astro:assets';
+import reviewLoop from '../../../assets/diagrams/ai-review-loop.svg';
 
-Estamos viviendo una era dorada de la IA generativa. Herramientas como Claude Code, Cursor y GitHub Copilot nos permiten entregar funcionalidades más rápido que nunca. Pero hay una tendencia creciente que veo en proyectos de código abierto e incluso en bases de código empresariales: **El Desarrollador Ausente.**
+## La trampa de "funciona y ya"
 
-Esto pasa cuando una persona trata a la IA no como una herramienta, sino como un contratista en el que puede confiar a ciegas. Escribe el prompt, copia y pega, despliega. Si compila, se publica.
+Herramientas como Claude Code, Cursor y GitHub Copilot nos dejan sacar funciones más rápido de lo que podríamos a mano. Las uso todos los días. Pero veo un patrón en proyectos de código abierto y en bases de código de empresa donde la persona que escribe el prompt deja de formar parte del proceso.
 
-Esta mentalidad es peligrosa. Como descubrí al auditar varias interfaces web "totalmente generadas por IA", este enfoque produce agujeros de seguridad tan grandes que podrías pasar un camión por ellos: autenticación del lado del cliente, rutas de archivos sin validar y acceso irrestricto a la shell.
+Va así. Tratas a la IA como a alguien que contrataste y en quien confías para que lo haga bien. Escribes el prompt. Copias el resultado. Lo despliegas. Si compila, se publica.
 
-## La IA es un desarrollador junior con anfetaminas
+Así es como acabas con agujeros de seguridad por los que pasa un camión. Encontré autenticación del lado del cliente, rutas de archivo sin validar y acceso a shell sin restricción en varias interfaces web que, según sus propios autores, estaban generadas por completo con IA. Puertas cerradas con la llave pegada al lado.
 
-Imagina contratar a un desarrollador junior que:
-1. Escribe 1000 palabras por minuto.
-2. Conoce todas las librerías que existen.
-3. No tiene ningún concepto de las implicaciones de seguridad a menos que se le diga explícitamente.
-4. Te mentirá con total seguridad si no sabe la respuesta.
+## La IA es un junior con turbo
 
-¿Dejarías que ese desarrollador hiciera push a producción sin una revisión de código? **No.**
+Imagina a un desarrollador junior que escribe mil palabras por minuto y se sabe todas las librerías que existen. Ahora dale dos rasgos más.
 
-Sin embargo, eso es exactamente lo que pasa cuando dejamos que la IA lleve un proyecto "en solitario". La IA optimiza para **resolver el prompt inmediato**. No optimiza por naturaleza para las "incógnitas desconocidas", como lo que ocurre si un usuario intercepta una petición, o si un parámetro de ruta contiene `../../`.
+No tiene idea de qué es un problema de seguridad salvo que alguien se lo diga. Y nunca dice que no sabe algo. Te entrega una respuesta segura de sí misma y equivocada.
 
-## El "bucle repetitivo" de la perdición
+¿Dejarías que esa persona empujara a producción sin que nadie lo leyera? Claro que no.
 
-Uno de los modos de fallo más comunes es el "Bucle de Contexto". Le pides a la IA que arregle un bug. Te da código. El código falla. Pegas el error de vuelta. Te da una versión "corregida".
+Eso es exactamente lo que hace un proyecto solo con IA. El modelo es muy bueno resolviendo lo que tiene delante y no tiene ninguna razón para pensar en qué pasa cuando alguien manda una petición que no planeaste. Un parámetro de ruta con `../../` no forma parte de la tarea que pediste así que nunca entra en la conversación.
 
-Tras 5 iteraciones, quizá tengas código que funciona, pero también tienes un monstruo de Frankenstein hecho de parches. La IA ha perdido el hilo de la arquitectura general. Solo está tirando espagueti a la pared para satisfacer tu mensaje de error.
+## El bucle que cría bugs
 
-**Aquí es donde nacen las vulnerabilidades.** Con las prisas por "ponerlo en verde", se saltan las comprobaciones de seguridad, se elimina la validación de entradas y se cuelan secretos hardcodeados.
+El modo de fallo que más veo es el bucle de contexto. Le das un bug a la IA. Te devuelve código. El código sigue fallando. Pegas el error de vuelta y recibes una versión "arreglada".
 
-## Cómo usar realmente la IA (La mentalidad de "Co-desarrollador")
+Cinco rondas después tienes algo que corre. También tienes un montón de parches que resolvieron un síntoma cada uno y el modelo perdió la forma del sistema con el que empezó. Ahora está ajustando código al mensaje de error en vez de al diseño.
 
-Para construir software seguro con IA, necesitas cambiar tu modelo mental. No eres el "prompter"; eres el **Ingeniero Líder**. La IA es tu compañera de pair programming.
+Aquí es donde entran las vulnerabilidades. En la prisa por poner los tests en verde se cae un chequeo de permisos. La validación de entrada desaparece porque estorbaba. Una clave se queda escrita en el código porque la variable de entorno era molesta. Nadie lo nota porque todos están mirando el test que por fin pasa.
 
-### 1. No aceptes la magia
-Si la IA escribe un bloque de código que no entiendes, **detente**. Pídele que lo explique. Si no puedes verificar que es seguro, asume que no lo es.
+## Cómo usar la IA de verdad
 
-### 2. Cuestiona el resultado
-Habla con la IA como con un colega.
-- *"Oye, quitaste el token CSRF en este refactor. ¿Por qué?"*
-- *"Este manejador de entrada parece vulnerable a XSS. Reescríbelo con sanitización."*
-- *"Estás usando `dangerouslySetInnerHTML` aquí. ¿Hay una forma más segura?"*
+La solución no es usar menos IA. Es quedarte en la silla. Tú eres el ingeniero a cargo y la IA es la persona con la que estás trabajando.
 
-### 3. Revisa los diffs, no solo el resultado
-No mires solo el archivo final. Mira el *diff*. ¿La IA borró a escondidas un comentario `TODO`? ¿Quitó una comprobación de permisos? Los modelos de IA tienen una ventana de contexto limitada; a menudo "olvidan" restricciones establecidas antes en la conversación.
+<Image src={reviewLoop} alt="Diagrama de un bucle de revisión de cinco pasos entre una persona y un agente de IA. Tú pides, la IA redacta, tú lees el diff, tú respondes y los chequeos pasan antes de publicar. Una flecha de vuelta devuelve el borrador rechazado a la IA para otro intento." style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+### No aceptes código que no puedas explicar
+
+Si la IA escribe un bloque que no entiendes entonces para. Pídele que explique el bloque línea por línea. Si sigues sin poder decir por qué es seguro entonces asume que no lo es. Esa sola regla atrapa casi todo el daño antes de que aterrice.
+
+### Responde al resultado
+
+Háblale como a un colega que escribió algo descuidado.
+
+- "Quitaste el token CSRF en este refactor. ¿Por qué tenía que irse?"
+- "Este manejador de entrada parece vulnerable a XSS. Reescríbelo con sanitización."
+- "Estás usando `dangerouslySetInnerHTML` aquí. ¿Hay una forma más segura?"
+
+La última vale la pena decirla en voz alta porque el modelo repite el patrón que usó la última vez. Nombrar el problema suele bastar para recibir una respuesta mejor en la siguiente pasada.
+
+### Lee el diff
+
+No leas solo el archivo final. Lee qué cambió.
+
+¿Borró un chequeo de permisos mientras limpiaba otra cosa? ¿Quitó una llamada de validación porque el camino feliz no la necesitaba? Los modelos trabajan dentro de una ventana de contexto y pierden en silencio restricciones que pusiste hace dos horas. El diff es el único sitio que te muestra qué se fue del edificio.
+
+### Mantén los chequeos fuera del chat
+
+A un modelo se le puede convencer de que un test pasa. Tu CI no. La autenticación y la autorización viven en el código y en el pipeline donde el agente tiene que satisfacerlas. La validación de entrada vive en el borde donde llegan los datos en vez de en un prompt que esperas que recuerde.
 
 ## Conclusión
 
-La IA es el multiplicador de fuerza más poderoso que hemos visto en la ingeniería de software. Me encanta usarla. La uso todos los días.
+La IA hace mucho más rápido a un ingeniero fuerte y hace fallar más rápido a un proceso descuidado. Si tu intención es publicar algo ahora y ver qué pasa entonces el modelo te va a ayudar a hacer exactamente eso. Si tu intención es publicar algo que aguante entonces también te ayuda con eso. La intención es tuya en cualquier caso.
 
-Pero **no** es un reemplazo del criterio de ingeniería. Es una herramienta que amplifica tu intención. Si tu intención es "construye esto rápido y no me importa cómo", amplificará esa imprudencia. Si tu intención es "ayúdame a construir un sistema robusto y seguro", amplificará tu oficio.
-
-No dejes que la IA conduzca el coche. Conduces tú. Deja que la IA lea el mapa.
+Tú conduces. La IA lee el mapa y discute contigo la salida y esa discusión es la parte útil.

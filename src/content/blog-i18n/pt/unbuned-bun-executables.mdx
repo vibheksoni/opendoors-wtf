@@ -13,6 +13,7 @@ source: unbuned-bun-executables
 ---
 import { Image } from 'astro:assets';
 import droidModules from '../../../assets/unbuned/droid-modules.png';
+import sectionLayout from '../../../assets/diagrams/unbuned-section-layout.svg';
 
 ## Por que eu construí isso
 
@@ -59,6 +60,8 @@ O arquivo é mapeado em memória em vez de carregado na RAM. Alguns desses biná
 Essa é a parte que tornou possível recuperar os nomes reais dos arquivos. O Bun não se limita a concatenar o seu código. Antes de escrever a seção, ele monta uma tabela de todos os arquivos embutidos, chamada `StandaloneModuleGraph`, e coloca essa tabela bem no final.
 
 Os últimos 16 bytes da seção são um marcador literal:
+
+<Image src={sectionLayout} alt="Diagrama da seção .bun mostrando o cabeçalho de tamanho, os módulos JavaScript, os dados embutidos, depois a tabela de arquivos, a estrutura Offsets de 32 bytes e o marcador trailer no final" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 ```text
 \n---- Bun! ----\n

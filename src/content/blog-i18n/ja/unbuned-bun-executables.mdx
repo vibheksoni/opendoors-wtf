@@ -13,6 +13,7 @@ source: unbuned-bun-executables
 ---
 import { Image } from 'astro:assets';
 import droidModules from '../../../assets/unbuned/droid-modules.png';
+import sectionLayout from '../../../assets/diagrams/unbuned-section-layout.svg';
 
 ## なぜ作ったのか
 
@@ -59,6 +60,8 @@ ELFとMach-Oも、それぞれのヘッダで同じように処理します。un
 実際のファイル名を取り戻せたのは、この部分のおかげです。Bunはコードを連結するだけではありません。セクションを書き出す前に、埋め込んだすべてのファイルの表を作り、それを `StandaloneModuleGraph` と呼んで、一番最後に置いています。
 
 セクションの最後の16バイトは、文字列そのままのマーカーです。
+
+<Image src={sectionLayout} alt="bun セクションの図。長さヘッダー、JavaScript モジュール、埋め込みデータ、続いてファイルテーブル、32 バイトの Offsets 構造、最後に trailer マーカーが並ぶ" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 ```text
 \n---- Bun! ----\n

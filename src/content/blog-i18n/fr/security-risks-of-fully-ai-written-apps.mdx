@@ -1,7 +1,7 @@
 ---
-title: "L'illusion dangereuse du « développeur IA en solo »"
-description: "Pourquoi considérer l'IA comme un remplaçant de la supervision d'ingénierie produit des logiciels vulnérables, et comment travailler correctement avec l'IA comme co-développeur."
-pubDate: 2025-01-23
+title: "L’illusion dangereuse du développeur seul avec l’IA"
+description: "Pourquoi confier un projet entier à un agent d’IA mène à du logiciel vulnérable et comment travailler avec lui comme partenaire au lieu d’un remplaçant."
+pubDate: 2026-01-23
 tags:
   - ai security
   - devsecops
@@ -11,54 +11,67 @@ lang: fr
 source: security-risks-of-fully-ai-written-apps
 ---
 
-## Le piège du « ça marche, c'est tout »
+import { Image } from 'astro:assets';
+import reviewLoop from '../../../assets/diagrams/ai-review-loop.svg';
 
-Nous vivons un âge d'or de l'IA générative. Des outils comme Claude Code, Cursor et GitHub Copilot nous permettent de livrer des fonctionnalités plus vite que jamais. Mais je vois une tendance grandissante dans des projets open source et même dans des bases de code d'entreprise : **le développeur absent.**
+## Le piège du "ça marche"
 
-Cela arrive quand un humain traite l'IA non pas comme un outil, mais comme un prestataire en qui il peut avoir une confiance aveugle. Il prompte, il copie-colle, il déploie. Si ça compile, ça part en production.
+Des outils comme Claude Code, Cursor et GitHub Copilot nous font livrer des fonctionnalités plus vite qu’à la main. Je les utilise tous les jours. Mais je vois un schéma dans des projets open source et dans des bases de code d’entreprise où la personne qui écrit le prompt cesse de faire partie du processus.
 
-Cet état d'esprit est dangereux. Comme je l'ai constaté en auditant plusieurs interfaces web « entièrement générées par IA », cette approche mène à des failles de sécurité si énormes qu'on pourrait y faire passer un camion : authentification côté client, chemins de fichiers non validés et accès shell sans restriction.
+Ça se passe comme ça. Vous traitez l’IA comme quelqu’un que vous avez embauché et à qui vous faites confiance pour bien faire. Vous écrivez le prompt. Vous copiez le résultat. Vous déployez. Si ça compile ça sort.
 
-## L'IA est un développeur junior sous amphétamines
+C’est comme ça qu’on obtient des trous de sécurité où passe un camion. J’ai trouvé de l’authentification côté navigateur, des chemins de fichiers non validés et un accès au shell sans restriction dans plusieurs interfaces web qui, selon leurs propres auteurs, étaient entièrement générées par IA. Des portes fermées avec la clé collée à côté.
 
-Imaginez que vous embauchiez un développeur junior qui :
-1. Tape 1000 mots par minute.
-2. Connaît toutes les bibliothèques qui existent.
-3. N'a aucune notion des implications de sécurité, sauf si on les lui dit explicitement.
-4. Vous mentira avec aplomb s'il ne connaît pas la réponse.
+## L’IA est un junior avec un turbo
 
-Laisseriez-vous ce développeur pousser en production sans revue de code ? **Non.**
+Imaginez un développeur junior qui tape mille mots par minute et connaît toutes les bibliothèques qui existent. Ajoutez-lui deux traits de plus.
 
-Pourtant, c'est exactement ce qui se passe quand on laisse l'IA faire cavalier seul sur un projet. L'IA optimise pour **résoudre le prompt immédiat**. Elle n'optimise pas naturellement pour les « inconnues inconnues », comme ce qui se passe si un utilisateur intercepte une requête, ou si un paramètre de chemin contient `../../`.
+Il n’a aucune idée de ce qu’est un problème de sécurité sauf si quelqu’un le lui dit. Et il ne dit jamais qu’il ne sait pas quelque chose. Il vous donne une réponse sûre d’elle et fausse.
 
-## La « boucle répétitive » fatale
+Laisseriez-vous cette personne pousser en production sans que personne ne relise ? Bien sûr que non.
 
-L'un des modes d'échec les plus courants est la « boucle de contexte ». Vous demandez à l'IA de corriger un bug. Elle vous donne du code. Le code échoue. Vous recollez l'erreur. Elle vous donne une version « corrigée ».
+C’est exactement ce que fait un projet mené seul avec l’IA. Le modèle est très bon pour résoudre ce qu’il a sous les yeux et il n’a aucune raison de penser à ce qui arrive quand quelqu’un envoie une requête que vous n’avez pas prévue. Un paramètre de chemin avec `../../` ne fait pas partie de la tâche demandée donc il n’entre jamais dans le tableau.
 
-Après 5 itérations, vous avez peut-être du code qui fonctionne, mais aussi un monstre de Frankenstein fait de rustines. L'IA a perdu le fil de l'architecture globale. Elle lance simplement des spaghettis contre le mur pour satisfaire votre message d'erreur.
+## La boucle qui produit des bugs
 
-**C'est là que naissent les vulnérabilités.** Dans la précipitation pour « passer au vert », des contrôles de sécurité sont contournés, la validation des entrées disparaît et des secrets codés en dur se glissent dans le code.
+Le mode de défaillance que je vois le plus est la boucle de contexte. Vous donnez un bug à l’IA. Elle vous rend du code. Le code échoue encore. Vous collez l’erreur et vous recevez une version "corrigée".
 
-## Comment vraiment utiliser l'IA (l'état d'esprit « co-développeur »)
+Cinq tours plus tard quelque chose tourne. Vous avez aussi un tas de correctifs qui ont chacun réglé un symptôme et le modèle a perdu la forme du système avec lequel il a commencé. Il ajuste maintenant du code au message d’erreur au lieu du design.
 
-Pour construire des logiciels sûrs avec l'IA, il faut changer de modèle mental. Vous n'êtes pas le « prompteur » ; vous êtes l'**ingénieur principal**. L'IA est votre binôme de programmation.
+C’est là que les vulnérabilités entrent. Dans la hâte de passer les tests au vert une vérification de permission saute. La validation d’entrée disparaît parce qu’elle gênait. Une clé se retrouve écrite en dur parce que la variable d’environnement était pénible. Personne ne le remarque parce que tout le monde regarde le test qui passe enfin.
 
-### 1. N'acceptez pas la magie
-Si l'IA écrit un bloc de code que vous ne comprenez pas, **arrêtez-vous**. Demandez-lui de l'expliquer. Si vous ne pouvez pas vérifier qu'il est sûr, partez du principe qu'il ne l'est pas.
+## Comment vraiment utiliser l’IA
 
-### 2. Challengez la sortie
-Parlez à l'IA comme à un collègue.
-- *« Hé, tu as supprimé le jeton CSRF dans ce refactoring. Pourquoi ? »*
-- *« Ce gestionnaire d'entrée a l'air vulnérable au XSS. Réécris-le avec de la sanitisation. »*
-- *« Tu utilises `dangerouslySetInnerHTML` ici. Y a-t-il une façon plus sûre de faire ? »*
+La réponse n’est pas d’utiliser moins d’IA. La réponse est de rester à votre place. Vous êtes l’ingénieur responsable et l’IA est la personne avec qui vous travaillez.
 
-### 3. Relisez les diffs, pas seulement le résultat
-Ne regardez pas seulement le fichier final. Regardez le *diff*. L'IA a-t-elle discrètement supprimé un commentaire `TODO` ? A-t-elle retiré une vérification de permission ? Les modèles d'IA ont une fenêtre de contexte limitée ; ils « oublient » souvent des contraintes établies plus tôt dans la conversation.
+<Image src={reviewLoop} alt="Schéma d’une boucle de revue en cinq étapes entre une personne et un agent d’IA. Vous demandez, l’IA rédige, vous lisez le diff, vous contestez et les vérifications passent avant la mise en ligne. Une flèche de retour renvoie le brouillon refusé à l’IA." style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+
+### N’acceptez pas de code que vous ne pouvez pas expliquer
+
+Si l’IA écrit un bloc que vous ne comprenez pas alors arrêtez. Demandez-lui d’expliquer le bloc ligne par ligne. Si vous ne pouvez toujours pas dire pourquoi c’est sûr alors partez du principe que ça ne l’est pas. Cette seule règle attrape presque tous les dégâts avant qu’ils n’arrivent.
+
+### Contestez le résultat
+
+Parlez-lui comme à un collègue qui a écrit quelque chose de négligé.
+
+- "Tu as retiré le jeton CSRF dans ce refactor. Pourquoi il devait partir ?"
+- "Ce gestionnaire d’entrée semble vulnérable au XSS. Réécris-le avec de la sanitisation."
+- "Tu utilises `dangerouslySetInnerHTML` ici. Il y a un moyen plus sûr ?"
+
+La dernière vaut la peine d’être dite à voix haute parce que le modèle répète le schéma qu’il a utilisé la dernière fois. Nommer le problème suffit souvent pour obtenir une meilleure réponse au tour suivant.
+
+### Lisez le diff
+
+Ne lisez pas seulement le fichier final. Lisez ce qui a changé.
+
+A-t-il supprimé une vérification de permission en rangeant autre chose ? A-t-il retiré un appel de validation parce que le chemin heureux n’en avait pas besoin ? Les modèles travaillent dans une fenêtre de contexte et perdent silencieusement des contraintes posées deux heures plus tôt. Le diff est le seul endroit qui montre ce qui a quitté le bâtiment.
+
+### Gardez les vérifications hors du chat
+
+On peut convaincre un modèle qu’un test passe. Votre CI non. L’authentification et l’autorisation vivent dans le code et dans le pipeline où l’agent doit les satisfaire. La validation d’entrée vit à la frontière où les données arrivent plutôt que dans un prompt dont vous espérez qu’il se souvienne.
 
 ## Conclusion
 
-L'IA est le multiplicateur de force le plus puissant que nous ayons vu en ingénierie logicielle. J'adore l'utiliser. Je l'utilise tous les jours.
+L’IA rend un ingénieur solide beaucoup plus rapide et fait échouer plus vite un processus négligé. Si votre intention est de livrer maintenant et de voir ce qui se passe alors le modèle vous aidera à faire exactement ça. Si votre intention est de livrer quelque chose qui tient alors il vous aidera aussi. L’intention est la vôtre dans les deux cas.
 
-Mais ce n'est **pas** un remplaçant du jugement d'ingénieur. C'est un outil qui amplifie votre intention. Si votre intention est « construis ça vite et peu importe comment », il amplifiera cette imprudence. Si votre intention est « aide-moi à construire un système robuste et sûr », il amplifiera votre savoir-faire.
-
-Ne laissez pas l'IA conduire la voiture. C'est vous qui conduisez. Laissez l'IA lire la carte.
+C’est vous qui conduisez. L’IA lit la carte et discute la sortie avec vous et cette discussion est la partie utile.
