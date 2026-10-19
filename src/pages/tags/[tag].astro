@@ -23,7 +23,7 @@ const { tag } = Astro.props;
 const posts = sortPosts(await getCollection('blog')).filter((post) => post.data.tags.includes(tag));
 const pageUrl = new URL(`/tags/${toSlug(tag)}/`, Astro.site ?? siteConfig.site).toString();
 const title = `${toTitle(tag)} posts`;
-const description = `${posts.length} ${posts.length === 1 ? 'writeup' : 'writeups'} on ${tag} by ${siteConfig.author.name}: ${posts.map((post) => post.data.title).join('; ')}.`;
+const description = `OpenDoors writeups on ${tag} by ${siteConfig.author.name}. ${posts.length} ${posts.length === 1 ? 'post' : 'posts'} on reverse engineering, security research and backend engineering.`;
 const jsonLd = [
 	buildBreadcrumbJsonLd([
 		{ name: 'Home', url: Astro.site?.toString() ?? siteConfig.site },

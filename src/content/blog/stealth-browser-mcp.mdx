@@ -1,6 +1,6 @@
 ---
 title: "How I Built stealth-browser-mcp"
-description: "Why I built stealth-browser-mcp, how it gives AI agents a real Chrome over MCP and CDP, and the benchmark that keeps me honest about what it can do."
+description: "Why I built stealth-browser-mcp, how it gives AI agents a real Chrome over MCP and CDP and the benchmark that keeps me honest about what it can do."
 pubDate: 2026-10-18
 tags:
   - browser automation
@@ -21,7 +21,7 @@ The idea was simple. Instead of a test browser that announces itself I wanted my
 
 I figured a few people might have the same problem. It has close to 3,000 stars and 390 forks now and 9 people I have never met have had pull requests merged into it. This post is how it works and what I learned building it.
 
-<Image src={architecture} alt="Diagram showing an AI agent talking to the stealth-browser-mcp FastMCP server over stdio JSON-RPC, which drives a real Chrome over CDP, with the stdout guard, trusted input, network tools and element cloning modules listed underneath" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={architecture} alt="Diagram of the agent to FastMCP server to real Chrome path over stdio and CDP, with the main modules underneath" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 ## How It Fits Together
 
@@ -80,7 +80,7 @@ Given a CSS selector the server pulls the element with its computed styles, its 
 
 The [Augment Code](https://www.augmentcode.com/) hero clone is the best demo of this. The whole thing was one message to Claude telling it to spawn a browser, go to the site and clone the hero. It extracted the element and came back with a working recreation with responsive behaviour in about two minutes.
 
-<Image src={heroClone} alt="Screenshot of the Augment Code hero section rebuilt as a clone, with the original headline, layout and styling reproduced in HTML" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={heroClone} alt="The Augment Code hero rebuilt as a clone, with the original headline, layout and styling" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 ### Page bindings
 

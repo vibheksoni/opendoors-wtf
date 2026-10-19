@@ -59,7 +59,7 @@ El archivo se mapea en memoria en vez de cargarse en RAM. Algunos de estos binar
 
 Esta es la parte que hizo posibles los nombres reales. Bun no solo concatena tu código. Antes de escribir la sección construye una tabla de cada archivo que embebió llamada `StandaloneModuleGraph` y la pone al final de todo.
 
-<Image src={sectionLayout} alt="Diagrama de la sección .bun mostrando la cabecera de longitud, los módulos JavaScript, los datos embebidos, después la tabla de archivos, la estructura Offsets de 32 bytes y el marcador trailer al final" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={sectionLayout} alt="Diagrama de la sección .bun mostrando la cabecera de longitud, los módulos JavaScript, los datos embebidos, después la tabla de archivos, la" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 Los últimos 16 bytes de la sección son un marcador literal.
 
@@ -101,7 +101,7 @@ Entry point: B:/~BUN/root/droid
 Graph loaders: 623 jsx, 43 binary, 40 file
 ```
 
-<Image src={droidModules} alt="Explorador de Windows mostrando la carpeta de módulos que unbuned escribió, con archivos llamados 0000-chunk-m0vzr57a.js hasta 0030-chunk-s3q890qc.js y 0008-droid.js" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={droidModules} alt="Explorador de Windows mostrando la carpeta de módulos que unbuned escribió, con archivos llamados 0000-chunk-m0vzr57a.js hasta" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 El grafo no puede darte nombres que Bun ya tiró. Para cuando escribe la tabla los chunks ya están hasheados a cosas como `chunk-9fxe9jf7.js` así que eso es lo que obtienes. unbuned reporta lo que el compilador grabó y no finge saber más.
 

@@ -61,7 +61,7 @@ Essa é a parte que tornou possível recuperar os nomes reais dos arquivos. O Bu
 
 Os últimos 16 bytes da seção são um marcador literal:
 
-<Image src={sectionLayout} alt="Diagrama da seção .bun mostrando o cabeçalho de tamanho, os módulos JavaScript, os dados embutidos, depois a tabela de arquivos, a estrutura Offsets de 32 bytes e o marcador trailer no final" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={sectionLayout} alt="Diagrama da seção .bun mostrando o cabeçalho de tamanho, os módulos JavaScript, os dados embutidos, depois a tabela de arquivos, a estrutura" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 ```text
 \n---- Bun! ----\n
@@ -101,7 +101,7 @@ Entry point: B:/~BUN/root/droid
 Graph loaders: 623 jsx, 43 binary, 40 file
 ```
 
-<Image src={droidModules} alt="Windows Explorer mostrando a pasta droid modules que o unbuned gravou, com arquivos nomeados de 0000-chunk-m0vzr57a.js até 0030-chunk-s3q890qc.js e 0008-droid.js" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={droidModules} alt="Windows Explorer mostrando a pasta droid modules que o unbuned gravou, com arquivos nomeados de 0000-chunk-m0vzr57a.js até 0030-chunk-s3q890qc.js" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 O grafo não consegue devolver nomes que o Bun já jogou fora. Quando ele escreve a tabela, os chunks já estão com hash em coisas como `chunk-9fxe9jf7.js`, então é isso que você recebe. O unbuned relata o que o compilador registrou e não finge saber mais do que isso.
 

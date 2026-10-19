@@ -1,6 +1,6 @@
 ---
 title: "Taking Apart Bun Executables With unbuned"
-description: "How Bun packs an app into one executable and how unbuned finds the bundle, reads Bun's module graph and recovers the original TypeScript from source maps."
+description: "How Bun packs an app into one executable and how unbuned finds the bundle, reads Bun's module graph and recovers the original TypeScript."
 pubDate: 2026-10-18
 tags:
   - reverse engineering
@@ -57,7 +57,7 @@ The file is memory mapped instead of loaded into RAM. Some of these binaries are
 
 This is the part that made real file names possible. Bun does not only concatenate your code. Before it writes the section it builds a table of every file it embedded called the `StandaloneModuleGraph` and it puts that table at the very end.
 
-<Image src={sectionLayout} alt="Diagram of the .bun section showing the length header, the JavaScript modules, the embedded data, then the file table, the 32 byte Offsets struct and the trailer marker at the very end" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={sectionLayout} alt="Layout of the .bun section from the length header through the modules and the file table to the trailer marker" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 The last 16 bytes of the section are a literal marker:
 
@@ -99,7 +99,7 @@ Entry point: B:/~BUN/root/droid
 Graph loaders: 623 jsx, 43 binary, 40 file
 ```
 
-<Image src={droidModules} alt="Windows Explorer showing the droid modules folder unbuned wrote, with files named 0000-chunk-m0vzr57a.js through 0030-chunk-s3q890qc.js and 0008-droid.js" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={droidModules} alt="Explorer showing the droid modules folder unbuned wrote, with the chunk files named from the module graph" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 The graph cannot give you names Bun already threw away. By the time it writes the table the chunks are already hashed to things like `chunk-9fxe9jf7.js` so that is what you get. unbuned reports what the compiler recorded and does not pretend to know more.
 

@@ -61,7 +61,7 @@ C'est la partie qui a rendu possibles les vrais noms de fichiers. Bun ne se cont
 
 Les 16 derniers octets de la section sont un marqueur littéral :
 
-<Image src={sectionLayout} alt="Schéma de la section .bun montrant l’en-tête de longueur, les modules JavaScript, les données embarquées, puis la table de fichiers, la structure Offsets de 32 octets et le marqueur trailer à la fin" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={sectionLayout} alt="Schéma de la section .bun montrant l’en-tête de longueur, les modules JavaScript, les données embarquées, puis la table de fichiers, la structure" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 ```text
 \n---- Bun! ----\n
@@ -101,7 +101,7 @@ Entry point: B:/~BUN/root/droid
 Graph loaders: 623 jsx, 43 binary, 40 file
 ```
 
-<Image src={droidModules} alt="Explorateur Windows montrant le dossier des modules droid écrit par unbuned, avec des fichiers nommés de 0000-chunk-m0vzr57a.js à 0030-chunk-s3q890qc.js et 0008-droid.js" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={droidModules} alt="Explorateur Windows montrant le dossier des modules droid écrit par unbuned, avec des fichiers nommés de 0000-chunk-m0vzr57a.js à" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 Le graphe ne peut pas vous donner les noms que Bun a déjà jetés. Au moment où il écrit la table, les chunks sont déjà hashés en quelque chose comme `chunk-9fxe9jf7.js`, et c'est donc ce que vous obtenez. unbuned rapporte ce que le compilateur a enregistré et ne prétend pas en savoir plus.
 

@@ -44,7 +44,8 @@ const {
 	jsonLd,
 } = Astro.props;
 
-const pageTitle = title === SITE_TITLE ? SITE_TITLE : `${title} | ${siteConfig.title}`;
+const brandedTitle = `${title} | ${siteConfig.title}`;
+const pageTitle = title === SITE_TITLE ? SITE_TITLE : brandedTitle.length <= 65 ? brandedTitle : title;
 const canonicalHref = canonical ?? canonicalURL.toString();
 const ogImage = image?.src
 	? new URL(image.src, Astro.site).toString()

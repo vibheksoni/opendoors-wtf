@@ -61,7 +61,7 @@ Das ist der Teil, der echte Dateinamen möglich gemacht hat. Bun hängt nicht ei
 
 Die letzten 16 Bytes der Section sind ein literaler Marker:
 
-<Image src={sectionLayout} alt="Diagramm der .bun-Sektion mit Längenheader, den JavaScript-Modulen, den eingebetteten Daten, dann der Dateitabelle, der 32 Byte großen Offsets-Struktur und dem Trailer-Marker am Ende" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={sectionLayout} alt="Diagramm der .bun-Sektion mit Längenheader, den JavaScript-Modulen, den eingebetteten Daten, dann der Dateitabelle, der 32 Byte großen" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 ```text
 \n---- Bun! ----\n
@@ -101,7 +101,7 @@ Entry point: B:/~BUN/root/droid
 Graph loaders: 623 jsx, 43 binary, 40 file
 ```
 
-<Image src={droidModules} alt="Windows Explorer zeigt den von unbuned geschriebenen Ordner droid modules mit Dateien namens 0000-chunk-m0vzr57a.js bis 0030-chunk-s3q890qc.js und 0008-droid.js" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
+<Image src={droidModules} alt="Windows Explorer zeigt den von unbuned geschriebenen Ordner droid modules mit Dateien namens 0000-chunk-m0vzr57a.js bis 0030-chunk-s3q890qc.js und" style="border-radius: 8px; border: 1px solid var(--border-subtle); margin: 2rem 0;" />
 
 Der Graph kann dir keine Namen geben, die Bun schon weggeworfen hat. Wenn Bun die Tabelle schreibt, sind die Chunks bereits zu Namen wie `chunk-9fxe9jf7.js` gehasht, also bekommst du genau das. unbuned gibt wieder, was der Compiler aufgezeichnet hat, und tut nicht so, als wüsste es mehr.
 

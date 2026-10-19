@@ -25,6 +25,13 @@ const jsonLd = [
 		})),
 	),
 ];
+const alternates = [
+	{ lang: 'en' as const, href: `${siteConfig.site}/blog/` },
+	...(['es', 'pt', 'de', 'fr', 'ja'] as const).map((code) => ({
+		lang: code,
+		href: `${siteConfig.site}/${code}/blog/`,
+	})),
+];
 const description = `All ${posts.length} OpenDoors writeups by ${siteConfig.author.name} on reverse engineering, malware analysis, AI security and backend engineering.`;
 
 const basePath = import.meta.env.BASE_URL;
@@ -37,7 +44,7 @@ const withBase = (path: string) => {
 <!doctype html>
 <html lang="en">
 	<head>
-		<BaseHead title="Blog" description={description} jsonLd={jsonLd} />
+		<BaseHead title="Blog" description={description} alternates={alternates} jsonLd={jsonLd} />
 		<style>
 			main {
 				width: 960px;
