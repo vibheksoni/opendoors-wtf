@@ -96,6 +96,7 @@ export function buildBlogPostingJsonLd(params: {
 	markdownUrl?: string;
 	lang?: string;
 	originalUrl?: string;
+	about?: { name: string; url: string };
 }) {
 	return {
 		"@context": "https://schema.org",
@@ -122,6 +123,7 @@ export function buildBlogPostingJsonLd(params: {
 			"@id": params.url,
 		},
 		image: [params.image],
+		about: params.about ? { "@type": "CreativeWork", name: params.about.name, url: params.about.url } : undefined,
 		keywords: params.keywords,
 		articleSection: params.keywords?.[0],
 		wordCount: params.wordCount,

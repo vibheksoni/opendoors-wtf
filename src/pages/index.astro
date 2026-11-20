@@ -47,11 +47,14 @@ const withBase = (path: string) => {
 						<p>
 							I'm a backend engineer in New York. <strong>OpenDoors</strong> is where I write up what I find when I take things apart, from Bun executables and browser automation to exposed AI servers and the security lessons that come out of building real systems.
 						</p>
+						<p class="open-line">
+							I'm open to backend, AI infrastructure and security roles. Reach me at <a href={`mailto:${siteConfig.author.email}`}>{siteConfig.author.email}</a>.
+						</p>
 					</div>
 				</div>
 				<div class="cta-row">
 					<a class="cta" href={withBase('/blog/')}>Read the blog</a>
-					<a class="cta ghost" href={withBase('/about/')}>About</a>
+					<a class="cta ghost" href={withBase('/projects/')}>Projects</a>
 				</div>
 			</section>
 
@@ -75,6 +78,21 @@ const withBase = (path: string) => {
 						</li>
 					))}
 				</ul>
+			</section>
+
+			<section class="projects">
+				<h2>Projects</h2>
+				<ul class="project-grid">
+					{siteConfig.projects.map((project) => (
+						<li>
+							<a href={withBase(`/projects/#${project.slug}`)} class="project">
+								<span class="project-name">{project.name}</span>
+								<span class="project-blurb">{project.blurb}</span>
+							</a>
+						</li>
+					))}
+				</ul>
+				<p class="all-topics"><a href={withBase('/projects/')}>All projects and links</a></p>
 			</section>
 
 			<section class="tags">
@@ -141,6 +159,46 @@ const withBase = (path: string) => {
 		line-height: 1.1;
 	}
 
+	.intro-text .open-line {
+		margin-top: 1rem;
+		font-size: 1rem;
+		color: var(--text-main);
+	}
+	.intro-text .open-line a {
+		color: var(--accent);
+	}
+	.project-grid {
+		list-style: none;
+		margin: 1.5rem 0 0;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+		gap: 0.75rem;
+	}
+	.project {
+		display: block;
+		height: 100%;
+		padding: 1rem 1.25rem;
+		border: 1px solid var(--border-subtle);
+		border-radius: 12px;
+		text-decoration: none;
+		transition: border-color 0.2s ease;
+	}
+	.project:hover {
+		border-color: var(--border-hover);
+	}
+	.project-name {
+		display: block;
+		color: var(--text-main);
+		font-weight: 600;
+		margin-bottom: 0.25rem;
+	}
+	.project-blurb {
+		display: block;
+		color: var(--text-muted);
+		font-size: 0.9rem;
+		line-height: 1.5;
+	}
 	.intro-text p {
 		margin: 0;
 		font-size: 1.15rem;

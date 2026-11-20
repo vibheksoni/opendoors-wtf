@@ -1,12 +1,13 @@
 ---
 import { Image } from 'astro:assets';
-import type { CollectionEntry } from 'astro:content';
+import { type CollectionEntry, getCollection } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
 import { siteConfig } from '../config/site';
 import { buildBlogPostingJsonLd, buildBreadcrumbJsonLd } from '../utils/jsonLd';
+import { sortPosts } from '../utils/posts';
 import { toSlug, toTitle } from '../utils/tags';
 import authorPhoto from '../assets/vibhek-soni.jpg';
 import { LANGUAGES, t, type Lang } from '../i18n';
@@ -17,6 +18,7 @@ type Props = CollectionEntry<'blog'>['data'] & {
 	lang?: Lang;
 	alternates?: Array<{ lang: Lang; href: string }>;
 	originalUrl?: string;
+	postId?: string;
 };
 
 const {
@@ -32,7 +34,21 @@ const {
 	lang = 'en',
 	alternates = [],
 	originalUrl,
+	postId,
 } = Astro.props;
+const project = postId ? siteConfig.projects.find((entry) => entry.posts.includes(postId)) : undefined;
+const allPosts = lang === 'en' && postId ? sortPosts(await getCollection('blog')) : [];
+const related = allPosts
+	.filter((post) => post.id !== postId)
+	.map((post) => ({
+		post,
+		score:
+			post.data.tags.filter((tag) => tags.includes(tag)).length +
+			(project && project.posts.includes(post.id) ? 3 : 0),
+	}))
+	.sort((a, b) => b.score - a.score || b.post.data.pubDate.valueOf() - a.post.data.pubDate.valueOf())
+	.slice(0, 3)
+	.map(({ post }) => post);
 const strings = t(lang);
 const pageUrl = new URL(Astro.url.pathname, Astro.site).toString();
 const heroUrl = new URL(heroImage ? heroImage.src : siteConfig.defaults.ogImage, Astro.site).toString();
@@ -53,6 +69,7 @@ const blogJsonLd = buildBlogPostingJsonLd({
 	markdownUrl,
 	lang,
 	originalUrl,
+	about: project ? { name: project.name, url: project.url } : undefined,
 });
 
 const basePath = import.meta.env.BASE_URL;
@@ -83,7 +100,7 @@ const withBase = (path: string) => {
 				width: 100%;
 				max-width: 100%;
 				margin: 0;
-				/* Padding is handled in global.css, but we might need extra for the hero image */
+				padding-bottom: 1rem;
 			}
 			.hero-image {
 				width: 100%;
@@ -106,10 +123,16 @@ const withBase = (path: string) => {
 				color: var(--text-muted);
 			}
 			.title {
-				margin-bottom: 2em;
-				padding: 1em 0;
+				margin-bottom: 0;
+				padding: 0;
 				text-align: center;
 				line-height: 1;
+			}
+			.title hr {
+				margin: 2.5rem 0 0;
+			}
+			.title + :global(*) {
+				margin-top: 2.5rem;
 			}
 			.title h1 {
 				margin: 0.5em 0;
@@ -225,6 +248,99 @@ const withBase = (path: string) => {
 			.support a {
 				color: var(--accent);
 			}
+			.open-to-work {
+				font-size: 0.95rem;
+				color: var(--text-main);
+			}
+			.open-to-work a {
+				color: var(--accent);
+			}
+			.project-card {
+				margin-top: 4rem;
+				padding: 1.5rem 1.75rem;
+				border: 1px solid var(--border-subtle);
+				border-radius: 14px;
+				background: rgba(255, 255, 255, 0.02);
+			}
+			.project-card p {
+				margin: 0 0 0.5rem;
+			}
+			.project-label,
+			.related-title {
+				font-family: var(--font-mono);
+				font-size: 0.75rem;
+				letter-spacing: 0.08em;
+				text-transform: uppercase;
+				color: var(--silver-dim);
+			}
+			.project-name {
+				font-size: 1.25rem;
+				font-weight: 600;
+			}
+			.project-name a {
+				color: var(--text-main);
+				text-decoration: none;
+			}
+			.project-name a:hover {
+				color: var(--accent);
+			}
+			.project-summary {
+				color: var(--text-muted);
+				font-size: 0.95rem;
+			}
+			.project-links {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.5rem 1.25rem;
+				margin-top: 0.75rem !important;
+				font-family: var(--font-mono);
+				font-size: 0.85rem;
+			}
+			.project-links a {
+				color: var(--accent);
+				text-decoration: none;
+			}
+			.project-links a:hover {
+				text-decoration: underline;
+			}
+			.project-card + .author-box {
+				margin-top: 2.5rem;
+			}
+			.related {
+				margin-top: 3rem;
+				padding-top: 2rem;
+				border-top: 1px solid var(--border-subtle);
+			}
+			.related ul {
+				list-style: none;
+				margin: 1rem 0 0;
+				padding: 0;
+				display: grid;
+				gap: 0.75rem;
+			}
+			.related a {
+				display: block;
+				padding: 1rem 1.25rem;
+				border: 1px solid var(--border-subtle);
+				border-radius: 12px;
+				text-decoration: none;
+				transition: border-color 0.2s ease;
+			}
+			.related a:hover {
+				border-color: var(--border-hover);
+			}
+			.related-name {
+				display: block;
+				color: var(--text-main);
+				font-weight: 600;
+				margin-bottom: 0.25rem;
+			}
+			.related-desc {
+				display: block;
+				color: var(--text-muted);
+				font-size: 0.9rem;
+				line-height: 1.5;
+			}
 		</style>
 	</head>
 
@@ -232,9 +348,11 @@ const withBase = (path: string) => {
 		<Header />
 		<main>
 			<article>
-				<figure class="hero-image">
-					{heroImage && <Image width={1020} height={510} src={heroImage} alt={title} />}
-				</figure>
+				{heroImage && (
+					<figure class="hero-image">
+						<Image width={1020} height={510} src={heroImage} alt={title} />
+					</figure>
+				)}
 				<div class="prose">
 					<header class="title">
 						<div class="date">
@@ -275,6 +393,19 @@ const withBase = (path: string) => {
 						<hr />
 					</header>
 					<slot />
+					{lang === 'en' && project && (
+						<aside class="project-card" aria-label={`About ${project.name}`}>
+							<p class="project-label">The project</p>
+							<p class="project-name"><a href={project.url} target="_blank" rel="noreferrer">{project.name}</a></p>
+							<p class="project-summary">{project.summary}</p>
+							<p class="project-links">
+								{project.links.map((link) => (
+									<a href={link.url} target="_blank" rel="noreferrer">{link.label} <span aria-hidden="true">↗</span></a>
+								))}
+								<a href={withBase('/projects/')}>All projects</a>
+							</p>
+						</aside>
+					)}
 					<aside class="author-box" aria-label="About the author">
 						<Image src={authorPhoto} alt="Vibhek Soni" width={128} height={128} class="author-photo" />
 						<div>
@@ -287,9 +418,27 @@ const withBase = (path: string) => {
 								<a href={`mailto:${siteConfig.author.email}`}>{strings.email}</a>
 								{markdownUrl && <a href={markdownUrl}>{strings.readMarkdown}</a>}
 							</p>
+							{lang === 'en' && (
+								<p class="open-to-work">I'm open to backend, AI infrastructure and security roles. Reach me at <a href={`mailto:${siteConfig.author.email}`}>{siteConfig.author.email}</a>.</p>
+							)}
 							<p class="support">{strings.support} <a href={siteConfig.socials.buymeacoffee} target="_blank" rel="noreferrer">{strings.coffee}</a> {strings.or} <a href={siteConfig.socials.devagency} target="_blank" rel="noreferrer">{strings.work}</a>.</p>
 						</div>
 					</aside>
+					{related.length > 0 && (
+						<nav class="related" aria-label="Keep reading">
+							<p class="related-title">Keep reading</p>
+							<ul>
+								{related.map((post) => (
+									<li>
+										<a href={withBase(`/blog/${post.id}/`)}>
+											<span class="related-name">{post.data.title}</span>
+											<span class="related-desc">{post.data.description}</span>
+										</a>
+									</li>
+								))}
+							</ul>
+						</nav>
+					)}
 				</div>
 			</article>
 		</main>

@@ -1,0 +1,62 @@
+---
+title: "Keeping a free AI API fair at 246 billion tokens"
+description: "How FreeTheAI moved from banning Discord alt accounts by hand to layered abuse prevention for a free AI API that never touches billing."
+pubDate: 2026-11-19
+draft: false
+tags:
+  - ai infrastructure
+  - api security
+  - abuse prevention
+  - backend
+  - freetheai
+---
+
+## Free attracts everyone
+
+FreeTheAI started as a free AI API. Anyone could get a key and call models through one OpenAI compatible endpoint. It has served over 246 billion tokens across 8.3 million requests and the numbers are public at [freetheai.org/stats](https://freetheai.org/stats). Over 21,000 people are in the [Discord](https://discord.gg/secrets).
+
+Free is great for real users. It is also the best deal on the internet for anyone who wants to resell it, script it or farm it.
+
+This post is about how we went from fighting that by hand to a system that handles most of it on its own. I will keep it at the level of ideas. People who abuse the service can read this too. The exact rules stay private.
+
+## Version one lived in Discord
+
+The first version of FreeTheAI ran out of Discord. Your Discord account was your identity. You joined the server, ran a command and got a key.
+
+That was the fastest way to launch and it is a big part of why the community grew so fast. It also meant one person with a pile of Discord accounts looked like a pile of people. Discord accounts are cheap to make in bulk. The free tier was only as strong as the weakest account.
+
+For a while staff handled it by hand. We banned keys, someone made new accounts and the cycle started again. That does not scale when the server grows by thousands of people.
+
+## Version two owns its identity
+
+Version two went live at the end of September 2026 and moved accounts onto FreeTheAI itself. You sign up on the site and the gateway owns your account, your keys and your usage. You can link a Discord account but it is never how you sign in. The community still lives in Discord.
+
+We also built our own human check in house instead of leaning on a third party captcha alone. It works with a mouse, touch or a keyboard. Owning it means we can change it when we see a new trick.
+
+## The rules we hold ourselves to
+
+The detection is layered. Simple rate and concurrency limits sit at the front. Slower pattern checks run behind them. Staff review sits on top. A few rules shaped every layer.
+
+**Detection can never touch money.** Abuse checks can only write holds and notes. They have no way to change wallets, usage or seller earnings. A bug in a detector can not double charge anyone or erase a bill.
+
+**Detection stays off the request path.** The heavy checks run in the background. Only a quick status lookup sits in front of a request.
+
+**Automatic holds stay narrow.** A hold only fires on specific patterns we are confident in. New checks get looked at by people before they act on their own.
+
+**Every hold can be appealed.** A held account can still sign in and open an appeal. Staff can release any hold and every release keeps a note on record.
+
+**Reviewed evidence stays reviewed.** Once a person has looked at something, it can not quietly hold the same account again.
+
+**We do not keep your messages to catch abuse.** The abuse pipeline does not store the text people send.
+
+**Free tier checks only gate free usage.** Paid usage is a separate path with its own limits.
+
+## What I would tell someone building the same thing
+
+Start with identity. If accounts cost nothing to make, every other check is fighting uphill.
+
+Watch what a new rule would do before you let it do it to a real person.
+
+Keep enforcement away from billing. When the two share code, a bad day in one becomes a bad day in both.
+
+Keep a person in the loop for appeals. A free service runs on trust and one wrong ban in a 21,000 person Discord gets noticed fast.

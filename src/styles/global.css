@@ -329,3 +329,11 @@ hr {
 	white-space: nowrap;
 	border: 0;
 }
+
+@media (min-width: 1800px) {
+	body { zoom: 1.15; }
+}
+
+@media (min-width: 2200px) {
+	body { zoom: 1.3; }
+}

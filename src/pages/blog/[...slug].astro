@@ -18,6 +18,6 @@ const { Content } = await render(post);
 const alternates = await alternatesFor(post.id);
 ---
 
-<BlogPost {...post.data} wordCount={postWordCount(post)} markdownUrl={postMarkdownUrl(post)} alternates={alternates}>
+<BlogPost {...post.data} postId={post.id} wordCount={postWordCount(post)} markdownUrl={postMarkdownUrl(post)} alternates={alternates}>
 	<Content />
 </BlogPost>

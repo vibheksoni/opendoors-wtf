@@ -21,6 +21,7 @@ const withBase = (path: string) => {
 		<div class="nav-links">
 			<HeaderLink href={withBase('/')}>Home</HeaderLink>
 			<HeaderLink href={withBase('/blog/')}>Blog</HeaderLink>
+			<HeaderLink href={withBase('/projects/')}>Projects</HeaderLink>
 			<HeaderLink href={withBase('/about/')}>About</HeaderLink>
 			<a href="https://vibheksoni.com/" target="_blank" rel="me noreferrer" class="portfolio-link">
 				Portfolio
@@ -177,6 +178,12 @@ const withBase = (path: string) => {
 		.nav-links {
 			width: 100%;
 			justify-content: center;
+			gap: 0;
+		}
+
+		.nav-links :global(a) {
+			padding: 0.4rem 0.5rem !important;
+			font-size: 0.85rem !important;
 		}
 
 		.social-links {

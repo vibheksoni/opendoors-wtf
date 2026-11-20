@@ -1,0 +1,186 @@
+---
+import { getCollection } from 'astro:content';
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import { siteConfig } from '../config/site';
+import { buildBreadcrumbJsonLd } from '../utils/jsonLd';
+import { sortPosts } from '../utils/posts';
+
+const pageUrl = new URL('/projects/', Astro.site ?? siteConfig.site).toString();
+const description =
+	'Projects built and run by Vibhek Soni, including FreeTheAI, stealth-browser-mcp, GoonPAI and secrets.wtf, with the posts written about each one.';
+const posts = sortPosts(await getCollection('blog'));
+const postsFor = (ids: string[]) => posts.filter((post) => ids.includes(post.id));
+
+const basePath = import.meta.env.BASE_URL;
+const withBase = (path: string) => {
+	const normalized = path.replace(/^\//, '');
+	return basePath.endsWith('/') ? `${basePath}${normalized}` : `${basePath}/${normalized}`;
+};
+
+const itemList = {
+	'@context': 'https://schema.org',
+	'@type': 'CollectionPage',
+	'@id': `${pageUrl}#page`,
+	url: pageUrl,
+	name: 'Projects by Vibhek Soni',
+	description,
+	author: { '@id': siteConfig.author.id },
+	mainEntity: {
+		'@type': 'ItemList',
+		itemListElement: siteConfig.projects.map((project, index) => ({
+			'@type': 'ListItem',
+			position: index + 1,
+			item: {
+				'@type': 'CreativeWork',
+				name: project.name,
+				url: project.url,
+				description: project.summary,
+				creator: { '@id': siteConfig.author.id },
+			},
+		})),
+	},
+};
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead
+			title="Projects by Vibhek Soni"
+			description={description}
+			jsonLd={[
+				buildBreadcrumbJsonLd([
+					{ name: 'Home', url: Astro.site?.toString() ?? siteConfig.site },
+					{ name: 'Projects', url: pageUrl },
+				]),
+				itemList,
+			]}
+		/>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<h1>Projects</h1>
+			<p class="lead">
+				Things I build and run. Each one links to the code or the live site, plus anything I have written about it.
+				I'm open to backend, AI infrastructure and security roles. Reach me at
+				<a href={`mailto:${siteConfig.author.email}`}>{siteConfig.author.email}</a>.
+			</p>
+
+			<ul class="project-list">
+				{siteConfig.projects.map((project) => {
+					const written = postsFor(project.posts);
+					return (
+						<li id={project.slug}>
+							<h2><a href={project.url} target="_blank" rel="noreferrer">{project.name}</a></h2>
+							<p class="summary">{project.summary}</p>
+							<p class="links">
+								{project.links.map((link) => (
+									<a href={link.url} target="_blank" rel="noreferrer">{link.label} <span aria-hidden="true">↗</span></a>
+								))}
+							</p>
+							{written.length > 0 && (
+								<ul class="written">
+									{written.map((post) => (
+										<li><a href={withBase(`/blog/${post.id}/`)}>{post.data.title}</a></li>
+									))}
+								</ul>
+							)}
+						</li>
+					);
+				})}
+			</ul>
+
+			<p class="more">
+				More on <a href={siteConfig.socials.github} target="_blank" rel="me noreferrer">GitHub</a> and my
+				<a href={siteConfig.sites.portfolio} rel="me">portfolio</a>.
+			</p>
+		</main>
+		<Footer />
+	</body>
+</html>
+
+<style>
+	.lead {
+		color: var(--text-muted);
+		font-size: 1.1rem;
+		max-width: 640px;
+	}
+
+	.lead a,
+	.more a,
+	.written a {
+		color: var(--accent);
+	}
+
+	.project-list {
+		list-style: none;
+		margin: 3rem 0 0;
+		padding: 0;
+		display: grid;
+		gap: 1.25rem;
+	}
+
+	.project-list > li {
+		padding: 1.5rem 1.75rem;
+		border: 1px solid var(--border-subtle);
+		border-radius: 14px;
+		background: rgba(255, 255, 255, 0.02);
+	}
+
+	.project-list h2 {
+		margin: 0 0 0.5rem;
+		font-size: 1.4rem;
+	}
+
+	.project-list h2 a {
+		color: var(--text-main);
+		text-decoration: none;
+	}
+
+	.project-list h2 a:hover {
+		color: var(--accent);
+	}
+
+	.summary {
+		margin: 0 0 0.75rem;
+		color: var(--text-muted);
+	}
+
+	.links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.25rem;
+		margin: 0;
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
+	}
+
+	.links a {
+		color: var(--accent);
+		text-decoration: none;
+	}
+
+	.links a:hover {
+		text-decoration: underline;
+	}
+
+	.written {
+		margin: 1rem 0 0;
+		padding: 1rem 0 0;
+		border-top: 1px solid var(--border-subtle);
+		list-style: none;
+		font-size: 0.95rem;
+	}
+
+	.written li + li {
+		margin-top: 0.35rem;
+	}
+
+	.more {
+		margin-top: 3rem;
+		color: var(--text-muted);
+	}
+</style>
